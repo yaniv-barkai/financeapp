@@ -27,11 +27,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 
 interface Props {
   value: string;
@@ -115,29 +110,33 @@ export function CategoryPicker({ value, onChange, typeFilter, placeholder }: Pro
 
   return (
     <>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between font-normal"
-          >
-            {selected ? (
-              <span className="flex items-center gap-2">
-                <span>{selected.icon}</span>
-                <span>{getCategoryDisplayName(selected, locale)}</span>
-              </span>
-            ) : (
-              <span className="text-muted-foreground">{effectivePlaceholder}</span>
-            )}
-            <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[280px] p-0" align="start">
+      <Button
+        type="button"
+        variant="outline"
+        role="combobox"
+        aria-expanded={open}
+        className="w-full justify-between font-normal"
+        onClick={() => setOpen(true)}
+      >
+        {selected ? (
+          <span className="flex items-center gap-2">
+            <span>{selected.icon}</span>
+            <span>{getCategoryDisplayName(selected, locale)}</span>
+          </span>
+        ) : (
+          <span className="text-muted-foreground">{effectivePlaceholder}</span>
+        )}
+        <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="p-0 gap-0 sm:max-w-sm overflow-hidden">
+          <DialogTitle className="sr-only">{t.picker_placeholder}</DialogTitle>
           <Command>
-            <CommandInput placeholder={t.picker_search} />
-            <CommandList>
+            <div className="border-b px-1 pt-1">
+              <CommandInput placeholder={t.picker_search} />
+            </div>
+            <CommandList className="max-h-[60vh]">
               <CommandEmpty>{t.picker_no_category}</CommandEmpty>
               {pinned.length > 0 && (
                 <CommandGroup heading={t.picker_pinned}>
@@ -165,8 +164,8 @@ export function CategoryPicker({ value, onChange, typeFilter, placeholder }: Pro
               </CommandGroup>
             </CommandList>
           </Command>
-        </PopoverContent>
-      </Popover>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showNew} onOpenChange={setShowNew}>
         <DialogContent className="sm:max-w-sm">
