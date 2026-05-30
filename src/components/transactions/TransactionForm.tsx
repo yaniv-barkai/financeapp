@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Timestamp } from "firebase/firestore";
-import { X, Paperclip } from "lucide-react";
+import { X } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useAppStore } from "@/lib/store";
 import { useLocale } from "@/components/providers/LocaleProvider";
@@ -18,9 +18,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "@/lib/firebase";
-
 interface Props {
   existing?: Transaction;
   onDone: () => void;
@@ -43,9 +40,7 @@ export function TransactionForm({ existing, onDone, defaultType = "expense" }: P
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>(existing?.tags ?? []);
   const [saving, setSaving] = useState(false);
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [suggestedCategoryId, setSuggestedCategoryId] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const normalized = normalizemerchant(merchantDisplay);
@@ -59,14 +54,6 @@ export function TransactionForm({ existing, onDone, defaultType = "expense" }: P
     const tag = tagInput.trim().toLowerCase().replace(/\s+/g, "-");
     if (tag && !tags.includes(tag)) setTags((prev) => [...prev, tag]);
     setTagInput("");
-  };
-
-  const uploadReceipt = async (txId: string): Promise<string | null> => {
-    if (!user || !receiptFile) return null;
-    const path = `users/${user.uid}/receipts/${txId}/${receiptFile.name}`;
-    const storageRef = ref(storage, path);
-    await uploadBytes(storageRef, receiptFile);
-    return path;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -85,19 +72,12 @@ export function TransactionForm({ existing, onDone, defaultType = "expense" }: P
         date: Timestamp.fromDate(new Date(date + "T12:00:00")),
         ...(note && { note }),
         tags,
-        ...(existing?.receiptPath != null && { receiptPath: existing.receiptPath }),
       };
 
       if (existing) {
-        let receiptPath = existing.receiptPath;
-        if (receiptFile) receiptPath = (await uploadReceipt(existing.id)) ?? undefined;
-        await updateTransaction(user.uid, activeBookId, existing.id, { ...txData, receiptPath });
+        await updateTransaction(user.uid, activeBookId, existing.id, txData);
       } else {
-        const txId = await addTransaction(user.uid, activeBookId, txData);
-        if (receiptFile) {
-          const receiptPath = await uploadReceipt(txId);
-          if (receiptPath) await updateTransaction(user.uid, activeBookId, txId, { receiptPath });
-        }
+        await addTransaction(user.uid, activeBookId, txData);
       }
 
       if (merchantDisplay) {
@@ -200,37 +180,6 @@ export function TransactionForm({ existing, onDone, defaultType = "expense" }: P
               </Badge>
             ))}
           </div>
-        )}
-      </div>
-
-      <div className="space-y-1.5">
-        <Label>{t.form_receipt}</Label>
-        <div className="flex gap-2 items-center">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Paperclip className="h-4 w-4" />
-            {receiptFile ? receiptFile.name : t.form_attach_photo}
-          </Button>
-          {receiptFile && (
-            <button type="button" onClick={() => setReceiptFile(null)} className="text-muted-foreground hover:text-foreground">
-              <X className="h-4 w-4" />
-            </button>
-          )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
-          />
-        </div>
-        {existing?.receiptPath && !receiptFile && (
-          <p className="text-xs text-muted-foreground">{t.form_receipt_attached}</p>
         )}
       </div>
 

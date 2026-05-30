@@ -110,7 +110,7 @@ export default function CategoriesPage() {
     useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 10 } })
   );
 
-  const handleCatDragEnd = async (type: "expense" | "income") => async (event: DragEndEvent) => {
+  const handleCatDragEnd = (type: "expense" | "income") => async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id || !user || !activeBookId) return;
     const typedCats = categories.filter((c) => c.type === type).sort((a, b) => a.order - b.order);

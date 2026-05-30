@@ -41,7 +41,6 @@ export interface Transaction {
   note?: string;
   tags: string[];
   splits?: Array<{ categoryId: string; amount: number }>;
-  receiptPath?: string;
   recurringId?: string;
   createdAt: Timestamp;
 }
