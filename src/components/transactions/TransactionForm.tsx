@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { Timestamp } from "firebase/firestore";
-import { X } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useAppStore } from "@/lib/store";
 import { useLocale } from "@/components/providers/LocaleProvider";
@@ -12,12 +11,13 @@ import { lookupMerchantCategory } from "@/lib/firestore/merchants";
 import { Transaction } from "@/lib/types";
 import { normalizemerchant } from "@/lib/utils";
 import { CategoryPicker } from "./CategoryPicker";
+import { TagPicker } from "./TagPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
+
 interface Props {
   existing?: Transaction;
   onDone: () => void;
@@ -26,7 +26,7 @@ interface Props {
 
 export function TransactionForm({ existing, onDone, defaultType = "expense" }: Props) {
   const { user } = useAuth();
-  const { activeBookId, merchants, setMerchants, bumpTxVersion } = useAppStore();
+  const { activeBookId, merchants, categories, setMerchants, bumpTxVersion } = useAppStore();
   const { t } = useLocale();
 
   const [type, setType] = useState<"income" | "expense">(existing?.type ?? defaultType);
@@ -37,7 +37,6 @@ export function TransactionForm({ existing, onDone, defaultType = "expense" }: P
   const [date, setDate] = useState(
     existing ? existing.date.toDate().toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)
   );
-  const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>(existing?.tags ?? []);
   const [saving, setSaving] = useState(false);
   const [suggestedCategoryId, setSuggestedCategoryId] = useState<string | null>(null);
@@ -48,13 +47,8 @@ export function TransactionForm({ existing, onDone, defaultType = "expense" }: P
     const suggestion = lookupMerchantCategory(merchants, merchantDisplay);
     setSuggestedCategoryId(suggestion);
     if (suggestion && !categoryId) setCategoryId(suggestion);
-  }, [merchantDisplay]);
-
-  const addTag = () => {
-    const tag = tagInput.trim().toLowerCase().replace(/\s+/g, "-");
-    if (tag && !tags.includes(tag)) setTags((prev) => [...prev, tag]);
-    setTagInput("");
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [merchantDisplay, merchants]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,6 +122,15 @@ export function TransactionForm({ existing, onDone, defaultType = "expense" }: P
       </div>
 
       <div className="space-y-1.5">
+        <Label>{t.form_merchant}</Label>
+        <Input
+          placeholder={t.form_merchant_placeholder}
+          value={merchantDisplay}
+          onChange={(e) => setMerchantDisplay(e.target.value)}
+        />
+      </div>
+
+      <div className="space-y-1.5">
         <Label>{t.form_category}</Label>
         <CategoryPicker
           value={categoryId}
@@ -135,17 +138,22 @@ export function TransactionForm({ existing, onDone, defaultType = "expense" }: P
           typeFilter={type}
         />
         {suggestedCategoryId && suggestedCategoryId === categoryId && (
-          <p className="text-xs text-muted-foreground">{t.form_auto_suggested}</p>
+          <p className="text-xs text-muted-foreground">
+            ✦ {t.form_auto_suggested}
+          </p>
         )}
-      </div>
-
-      <div className="space-y-1.5">
-        <Label>{t.form_merchant}</Label>
-        <Input
-          placeholder={t.form_merchant_placeholder}
-          value={merchantDisplay}
-          onChange={(e) => setMerchantDisplay(e.target.value)}
-        />
+        {suggestedCategoryId && suggestedCategoryId !== categoryId && (() => {
+          const suggestedCat = categories.find((c) => c.id === suggestedCategoryId);
+          return suggestedCat ? (
+            <button
+              type="button"
+              className="text-xs text-primary underline-offset-2 hover:underline flex items-center gap-1"
+              onClick={() => setCategoryId(suggestedCategoryId)}
+            >
+              ✦ {t.form_suggested_prefix} {suggestedCat.icon} {suggestedCat.name}
+            </button>
+          ) : null;
+        })()}
       </div>
 
       <div className="space-y-1.5">
@@ -160,27 +168,7 @@ export function TransactionForm({ existing, onDone, defaultType = "expense" }: P
 
       <div className="space-y-1.5">
         <Label>{t.form_tags}</Label>
-        <div className="flex gap-2">
-          <Input
-            placeholder={t.form_tag_placeholder}
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
-          />
-          <Button type="button" variant="outline" size="sm" onClick={addTag}>{t.form_add_tag}</Button>
-        </div>
-        {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-1.5">
-            {tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="gap-1">
-                #{tag}
-                <button type="button" onClick={() => setTags((prev) => prev.filter((x) => x !== tag))}>
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
-          </div>
-        )}
+        <TagPicker value={tags} onChange={setTags} />
       </div>
 
       <div className="flex gap-2 pt-2">

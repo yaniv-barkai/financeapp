@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { Plus, Pencil, Trash2, Pin, PinOff, TrendingUp, TrendingDown, Wallet, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, Pin, PinOff, TrendingUp, TrendingDown, Wallet, GripVertical, Tag } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -32,6 +32,8 @@ import {
   getCategories,
   updateCategoryOrders,
 } from "@/lib/firestore/categories";
+import { addTag, updateTag, deleteTag, getTags } from "@/lib/firestore/tags";
+import { getTransactionsByMonth } from "@/lib/firestore/transactions";
 import { BudgetPeriod, Category, CategoryLimit } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +47,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { formatCurrency, getCategoryDisplayName, translateHeToEn } from "@/lib/utils";
+import { formatCurrency, getCategoryDisplayName, translateHeToEn, getMonthRange } from "@/lib/utils";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
 import { EmojiPickerButton } from "@/components/ui/EmojiPickerButton";
 
@@ -91,7 +93,7 @@ function SortableCatRow({ id, children }: { id: string; children: React.ReactNod
 export default function CategoriesPage() {
   const { loading } = useRequireAuth();
   const { user } = useAuth();
-  const { activeBookId, categories, setCategories, currency } = useAppStore();
+  const { activeBookId, categories, setCategories, tags, setTags, currency, activeMonth } = useAppStore();
   const { t, locale } = useLocale();
 
   const confirm = useConfirm();
@@ -105,6 +107,14 @@ export default function CategoriesPage() {
   const [limitPeriod, setLimitPeriod] = useState<BudgetPeriod>("monthly");
   const [saving, setSaving] = useState(false);
   const [translating, setTranslating] = useState(false);
+
+  // Tag state
+  const [tagStats, setTagStats] = useState<Record<string, { spent: number; count: number }>>({});
+  const [tagStatsLoaded, setTagStatsLoaded] = useState(false);
+  const [showTagForm, setShowTagForm] = useState(false);
+  const [editTagId, setEditTagId] = useState<string | null>(null);
+  const [tagForm, setTagForm] = useState({ name: "", color: CAT_COLORS[0] });
+  const [savingTag, setSavingTag] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -129,6 +139,23 @@ export default function CategoriesPage() {
     if (!user || !activeBookId) return;
     const lims = await getAllLimitDetails(user.uid, activeBookId, categories);
     setLimits(lims);
+  };
+
+  const loadTagStats = async () => {
+    if (!user || !activeBookId) return;
+    const { start, end } = getMonthRange(activeMonth);
+    const txs = await getTransactionsByMonth(user.uid, activeBookId, start, end);
+    const stats: Record<string, { spent: number; count: number }> = {};
+    for (const tx of txs) {
+      if (tx.type !== "expense") continue;
+      for (const tagId of (tx.tags ?? [])) {
+        if (!stats[tagId]) stats[tagId] = { spent: 0, count: 0 };
+        stats[tagId].spent += tx.amount;
+        stats[tagId].count += 1;
+      }
+    }
+    setTagStats(stats);
+    setTagStatsLoaded(true);
   };
 
   useEffect(() => {
@@ -156,6 +183,12 @@ export default function CategoriesPage() {
     if (!user || !activeBookId) return;
     const updated = await getCategories(user.uid, activeBookId);
     setCategories(updated);
+  };
+
+  const refreshTags = async () => {
+    if (!user || !activeBookId) return;
+    const updated = await getTags(user.uid, activeBookId);
+    setTags(updated);
   };
 
   const openNew = (type: "expense" | "income") => {
@@ -245,6 +278,50 @@ export default function CategoriesPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // ─── Tag handlers ──────────────────────────────────────────────────────────
+
+  const openNewTag = () => {
+    setEditTagId(null);
+    setTagForm({ name: "", color: CAT_COLORS[0] });
+    setShowTagForm(true);
+  };
+
+  const openEditTag = (tag: { id: string; name: string; color: string }) => {
+    setEditTagId(tag.id);
+    setTagForm({ name: tag.name, color: tag.color });
+    setShowTagForm(true);
+  };
+
+  const handleSaveTag = async () => {
+    if (!user || !activeBookId || !tagForm.name.trim()) return;
+    setSavingTag(true);
+    try {
+      if (editTagId) {
+        await updateTag(user.uid, activeBookId, editTagId, { name: tagForm.name.trim(), color: tagForm.color });
+      } else {
+        await addTag(user.uid, activeBookId, tagForm.name.trim(), tagForm.color);
+      }
+      await refreshTags();
+      setShowTagForm(false);
+    } finally {
+      setSavingTag(false);
+    }
+  };
+
+  const handleDeleteTag = async (tagId: string, tagName: string) => {
+    if (!user || !activeBookId) return;
+    const ok = await confirm({
+      title: `Delete tag "${tagName}"?`,
+      message: t.tags_delete_confirm,
+      confirmLabel: "Delete",
+      cancelLabel: t.tags_cancel,
+    });
+    if (!ok) return;
+    await deleteTag(user.uid, activeBookId, tagId);
+    await refreshTags();
+    setTagStats((prev) => { const s = { ...prev }; delete s[tagId]; return s; });
   };
 
   if (loading) return null;
@@ -375,6 +452,10 @@ export default function CategoriesPage() {
         <TabsList>
           <TabsTrigger value="expense">{t.categories_expenses_tab} ({expenseCategories.length})</TabsTrigger>
           <TabsTrigger value="income">{t.categories_income_tab} ({incomeCategories.length})</TabsTrigger>
+          <TabsTrigger value="tags" onClick={() => { if (!tagStatsLoaded) loadTagStats(); }}>
+            <Tag className="h-3.5 w-3.5 me-1.5" />
+            {t.tags_tab} ({tags.length})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="expense" className="mt-4 space-y-3">
@@ -389,6 +470,64 @@ export default function CategoriesPage() {
             <Plus className="h-4 w-4" /> {t.categories_add_income}
           </Button>
           <CategoryList cats={incomeCategories} type="income" />
+        </TabsContent>
+
+        <TabsContent value="tags" className="mt-4 space-y-3">
+          <Button size="sm" onClick={openNewTag} className="gap-2">
+            <Plus className="h-4 w-4" /> {t.tags_add}
+          </Button>
+
+          {tags.length === 0 ? (
+            <p className="text-center text-muted-foreground text-sm py-8">{t.tags_no_tags}</p>
+          ) : (
+            <div className="space-y-2">
+              {tags.map((tag) => {
+                const stats = tagStats[tag.id];
+                return (
+                  <div key={tag.id} className="flex items-center gap-3 px-4 py-3 rounded-lg border bg-card">
+                    <span
+                      className="w-4 h-4 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: tag.color }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-sm">{tag.name}</span>
+                      {tagStatsLoaded && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {stats
+                            ? `${t.tags_stats_spent}: ${formatCurrency(stats.spent, currency)} · ${stats.count} ${t.tags_stats_transactions}`
+                            : t.tags_stats_empty}
+                        </p>
+                      )}
+                    </div>
+                    {tagStatsLoaded && stats && (
+                      <div
+                        className="h-1.5 rounded-full w-20 flex-shrink-0 overflow-hidden bg-muted"
+                        title={formatCurrency(stats.spent, currency)}
+                      >
+                        <div
+                          className="h-full rounded-full"
+                          style={{ backgroundColor: tag.color, width: "100%" }}
+                        />
+                      </div>
+                    )}
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditTag(tag)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => handleDeleteTag(tag.id, tag.name)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
@@ -506,6 +645,56 @@ export default function CategoriesPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowLimitDialog(null)}>{t.categories_cancel}</Button>
             <Button onClick={handleSetLimit} disabled={saving}>{t.categories_save}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tag form dialog */}
+      <Dialog open={showTagForm} onOpenChange={setShowTagForm}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>{editTagId ? t.tags_edit_title : t.tags_create_title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>{t.tags_name}</Label>
+              <Input
+                placeholder={t.tags_name_placeholder}
+                value={tagForm.name}
+                onChange={(e) => setTagForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t.tags_color}</Label>
+              <div className="flex gap-2 flex-wrap">
+                {CAT_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className="w-7 h-7 rounded-full border-2 transition-all"
+                    style={{ backgroundColor: c, borderColor: tagForm.color === c ? "#000" : "transparent" }}
+                    onClick={() => setTagForm((f) => ({ ...f, color: c }))}
+                  />
+                ))}
+              </div>
+            </div>
+            {tagForm.name.trim() && (
+              <div className="flex items-center gap-2 pt-1">
+                <span className="text-xs text-muted-foreground">Preview:</span>
+                <span
+                  className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+                  style={{ backgroundColor: tagForm.color + "22", color: tagForm.color, border: `1px solid ${tagForm.color}55` }}
+                >
+                  {tagForm.name.trim()}
+                </span>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTagForm(false)}>{t.tags_cancel}</Button>
+            <Button onClick={handleSaveTag} disabled={!tagForm.name.trim() || savingTag}>
+              {savingTag ? t.tags_saving : editTagId ? t.tags_save : t.tags_create}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

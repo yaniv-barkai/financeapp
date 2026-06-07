@@ -79,7 +79,7 @@ function SortableCategoryRow({ id, isReordering, children }: SortableCategoryRow
 
 export default function DashboardPage() {
   const { user, loading } = useRequireAuth();
-  const { activeBookId, categories, setCategories, currency, activeMonth, txVersion } = useAppStore();
+  const { activeBookId, categories, setCategories, tags, currency, activeMonth, txVersion } = useAppStore();
   const { t } = useLocale();
   const confirm = useConfirm();
 
@@ -462,9 +462,13 @@ export default function DashboardPage() {
                   <p className="text-sm font-medium truncate">{tx.merchantDisplay || cat?.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {cat?.name} · {formatDate(tx.date.toDate())}
-                    {tx.tags?.length > 0 && (
-                      <span> · {tx.tags.map((tag) => `#${tag}`).join(" ")}</span>
-                    )}
+                    {tx.tags?.length > 0 && (() => {
+                      const txTagNames = tx.tags
+                        .map((id) => tags.find((tg) => tg.id === id)?.name)
+                        .filter(Boolean)
+                        .join(", ");
+                      return txTagNames ? <span> · {txTagNames}</span> : null;
+                    })()}
                   </p>
                 </div>
                 <span

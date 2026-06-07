@@ -25,8 +25,11 @@ export function formatDate(date: Date, locale?: string): string {
 export function normalizemerchant(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^\w\s]/g, " ")
+    // \p{L} = any Unicode letter (preserves Hebrew, Arabic, etc.), \p{N} = any Unicode digit
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    // strip long digit sequences used as reference codes / branch numbers
     .replace(/\s*#?\d{3,}\s*/g, " ")
+    // strip common English legal suffixes
     .replace(/\b(inc|ltd|llc|corp|co|the)\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();

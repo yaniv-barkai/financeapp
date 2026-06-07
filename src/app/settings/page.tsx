@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { Pencil, Trash2, LogOut, BookOpen, Globe } from "lucide-react";
+import { Pencil, Trash2, LogOut, BookOpen, Globe, BrainCircuit } from "lucide-react";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useAppStore } from "@/lib/store";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { updateBook, deleteBook, getBooks } from "@/lib/firestore/books";
+import { getAllTransactions } from "@/lib/firestore/transactions";
+import { rebuildMerchantMemory, getMerchants } from "@/lib/firestore/merchants";
 import { setUserSettings } from "@/lib/firestore/settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,12 +43,34 @@ const BOOK_COLORS = [
 export default function SettingsPage() {
   const { loading } = useRequireAuth();
   const { user, signOutUser } = useAuth();
-  const { books, setBooks, activeBookId, setActiveBookId, currency, setCurrency } = useAppStore();
+  const { books, setBooks, activeBookId, setActiveBookId, currency, setCurrency, setMerchants } = useAppStore();
   const { t, locale, setLocale } = useLocale();
 
   const confirm = useConfirm();
   const [editBook, setEditBook] = useState<{ id: string; name: string; color: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [rebuilding, setRebuilding] = useState(false);
+
+  const handleRebuildMemory = async () => {
+    if (!user) return;
+    setRebuilding(true);
+    try {
+      let total = 0;
+      for (const book of books) {
+        const allTx = await getAllTransactions(user.uid, book.id);
+        const count = await rebuildMerchantMemory(user.uid, book.id, allTx);
+        total += count;
+      }
+      // Refresh merchants for the active book into the store
+      if (activeBookId) {
+        const updated = await getMerchants(user.uid, activeBookId);
+        setMerchants(updated);
+      }
+      toast.success(t.settings_rebuild_done.replace("{n}", String(total)));
+    } finally {
+      setRebuilding(false);
+    }
+  };
 
   const handleCurrencyChange = async (val: string) => {
     setCurrency(val);
@@ -176,6 +200,26 @@ export default function SettingsPage() {
               </Button>
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      {/* Merchant Memory */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <BrainCircuit className="h-4 w-4" /> {t.settings_rebuild_memory}
+          </CardTitle>
+          <CardDescription>{t.settings_rebuild_memory_desc}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRebuildMemory}
+            disabled={rebuilding}
+          >
+            {rebuilding ? t.settings_rebuilding : t.settings_rebuild_memory}
+          </Button>
         </CardContent>
       </Card>
 

@@ -23,7 +23,7 @@ export function GlobalSearch() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [query, setQuery] = useState("");
   const { user } = useAuth();
-  const { activeBookId, categories, currency } = useAppStore();
+  const { activeBookId, categories, tags, currency } = useAppStore();
   const { t } = useLocale();
   const router = useRouter();
 
@@ -56,7 +56,10 @@ export function GlobalSearch() {
           t.merchantDisplay?.toLowerCase().includes(q) ||
           t.note?.toLowerCase().includes(q) ||
           String(t.amount).includes(q) ||
-          t.tags?.some((tag) => tag.includes(q))
+          t.tags?.some((tagId) => {
+            const tagName = tags.find((tg) => tg.id === tagId)?.name ?? "";
+            return tagName.toLowerCase().includes(q);
+          })
         );
       }).slice(0, 20)
     : transactions.slice(0, 10);

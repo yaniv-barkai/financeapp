@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Book, Category, Merchant } from "./types";
+import { Book, Category, Merchant, Tag } from "./types";
 
 export type DashboardSectionId = "summary" | "budgets" | "recurring" | "transactions";
 
@@ -16,6 +16,7 @@ interface AppState {
   books: Book[];
   categories: Category[];
   merchants: Merchant[];
+  tags: Tag[];
   currency: string;
   activeMonth: string;
   txVersion: number;
@@ -25,6 +26,7 @@ interface AppState {
   setBooks: (books: Book[]) => void;
   setCategories: (cats: Category[]) => void;
   setMerchants: (m: Merchant[]) => void;
+  setTags: (tags: Tag[]) => void;
   setCurrency: (c: string) => void;
   setActiveMonth: (m: string) => void;
   bumpTxVersion: () => void;
@@ -43,6 +45,7 @@ export const useAppStore = create<AppState>()(
       books: [],
       categories: [],
       merchants: [],
+      tags: [],
       currency: "USD",
       activeMonth: currentMonthKey(),
       txVersion: 0,
@@ -52,6 +55,7 @@ export const useAppStore = create<AppState>()(
       setBooks: (books) => set({ books }),
       setCategories: (cats) => set({ categories: cats }),
       setMerchants: (m) => set({ merchants: m }),
+      setTags: (tags) => set({ tags }),
       setCurrency: (c) => set({ currency: c }),
       setActiveMonth: (m) => set({ activeMonth: m }),
       bumpTxVersion: () => set((s) => ({ txVersion: s.txVersion + 1 })),

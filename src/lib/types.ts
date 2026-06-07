@@ -100,4 +100,6 @@ export interface ImportRow {
   bookId: string;
   skip: boolean;
   isDuplicate?: boolean;
+  tags: string[];
+  imported?: boolean;
 }

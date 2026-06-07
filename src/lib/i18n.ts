@@ -72,6 +72,11 @@ export interface Translations {
   transactions_moving: string;
   transactions_move: string;
   transactions_delete_confirm: string;
+  transactions_convert_to_recurring: string;
+  transactions_recurring_dialog_title: string;
+  transactions_recurring_cadence: string;
+  transactions_recurring_converting: string;
+  transactions_recurring_convert: string;
 
   // Categories page
   categories_title: string;
@@ -130,6 +135,10 @@ export interface Translations {
   settings_save: string;
   settings_one_book_required: string;
   settings_delete_book_confirm: string;
+  settings_rebuild_memory: string;
+  settings_rebuild_memory_desc: string;
+  settings_rebuilding: string;
+  settings_rebuild_done: string;
 
   // Login page
   login_title: string;
@@ -194,6 +203,7 @@ export interface Translations {
   import_col_amount: string;
   import_col_category: string;
   import_col_book: string;
+  import_col_tags: string;
   import_auto_hint: string;
   import_importing: string;
   import_done_title: string;
@@ -243,6 +253,7 @@ export interface Translations {
   form_tag_placeholder: string;
   form_add_tag: string;
   form_auto_suggested: string;
+  form_suggested_prefix: string;
   form_receipt: string;
   form_attach_photo: string;
   form_receipt_attached: string;
@@ -268,6 +279,28 @@ export interface Translations {
 
   // QuickAdd FAB
   fab_add_transaction: string;
+
+  // Tags management
+  tags_tab: string;
+  tags_title: string;
+  tags_add: string;
+  tags_no_tags: string;
+  tags_name: string;
+  tags_name_placeholder: string;
+  tags_color: string;
+  tags_create_title: string;
+  tags_edit_title: string;
+  tags_create: string;
+  tags_save: string;
+  tags_saving: string;
+  tags_cancel: string;
+  tags_delete_confirm: string;
+  tags_stats_spent: string;
+  tags_stats_transactions: string;
+  tags_stats_empty: string;
+  tags_picker_search: string;
+  tags_picker_no_results: string;
+  tags_picker_create: string;
 }
 
 const en: Translations = {
@@ -336,6 +369,11 @@ const en: Translations = {
   transactions_moving: "Moving…",
   transactions_move: "Move",
   transactions_delete_confirm: "Delete this transaction?",
+  transactions_convert_to_recurring: "Make recurring…",
+  transactions_recurring_dialog_title: "Make Recurring",
+  transactions_recurring_cadence: "Repeat",
+  transactions_recurring_converting: "Converting…",
+  transactions_recurring_convert: "Convert",
 
   categories_title: "Categories",
   categories_expenses_tab: "Expenses",
@@ -392,6 +430,10 @@ const en: Translations = {
   settings_save: "Save",
   settings_one_book_required: "You must keep at least one book.",
   settings_delete_book_confirm: "All transactions inside will be lost.",
+  settings_rebuild_memory: "Rebuild Merchant Memory",
+  settings_rebuild_memory_desc: "Re-scan all transactions and rebuild auto-category suggestions from your history. Use this if suggestions stopped working after adding transactions.",
+  settings_rebuilding: "Rebuilding…",
+  settings_rebuild_done: "Rebuilt {n} merchant categories",
 
   login_title: "FinanceApp",
   login_sign_in_description: "Sign in to your account",
@@ -454,6 +496,7 @@ const en: Translations = {
   import_col_amount: "Amount",
   import_col_category: "Category",
   import_col_book: "Book",
+  import_col_tags: "Tags",
   import_auto_hint: "✦ = auto-categorized from merchant history",
   import_importing: "Importing…",
   import_done_title: "Import complete!",
@@ -501,6 +544,7 @@ const en: Translations = {
   form_tag_placeholder: "Add tag…",
   form_add_tag: "Add",
   form_auto_suggested: "Auto-suggested from merchant history",
+  form_suggested_prefix: "Suggested:",
   form_receipt: "Receipt",
   form_attach_photo: "Attach photo",
   form_receipt_attached: "Receipt already attached",
@@ -524,6 +568,27 @@ const en: Translations = {
   picker_create: "Create",
 
   fab_add_transaction: "Add transaction",
+
+  tags_tab: "Tags",
+  tags_title: "Tags",
+  tags_add: "New Tag",
+  tags_no_tags: "No tags yet. Create one to label your expenses.",
+  tags_name: "Name",
+  tags_name_placeholder: "e.g. Greece Trip",
+  tags_color: "Color",
+  tags_create_title: "New Tag",
+  tags_edit_title: "Edit Tag",
+  tags_create: "Create",
+  tags_save: "Save",
+  tags_saving: "Saving…",
+  tags_cancel: "Cancel",
+  tags_delete_confirm: "Transactions tagged with this won't be deleted.",
+  tags_stats_spent: "Total spent",
+  tags_stats_transactions: "transactions",
+  tags_stats_empty: "No spending yet this month.",
+  tags_picker_search: "Search or create tag…",
+  tags_picker_no_results: "No tags found.",
+  tags_picker_create: "Create",
 };
 
 const he: Translations = {
@@ -592,6 +657,11 @@ const he: Translations = {
   transactions_moving: "מעביר…",
   transactions_move: "העבר",
   transactions_delete_confirm: "למחוק עסקה זו?",
+  transactions_convert_to_recurring: "הפוך לתשלום קבוע…",
+  transactions_recurring_dialog_title: "הפוך לתשלום קבוע",
+  transactions_recurring_cadence: "חזרה",
+  transactions_recurring_converting: "ממיר…",
+  transactions_recurring_convert: "המר",
 
   categories_title: "קטגוריות",
   categories_expenses_tab: "הוצאות",
@@ -648,6 +718,10 @@ const he: Translations = {
   settings_save: "שמור",
   settings_one_book_required: "חייב להישאר לפחות ספר אחד.",
   settings_delete_book_confirm: "כל העסקאות בספר זה יאבדו.",
+  settings_rebuild_memory: "שחזר זיכרון ספקים",
+  settings_rebuild_memory_desc: "סרוק מחדש את כל העסקאות ובנה מחדש את הצעות הקטגוריה האוטומטיות. השתמש בזה אם ההצעות הפסיקו לעבוד.",
+  settings_rebuilding: "בונה מחדש…",
+  settings_rebuild_done: "שוחזרו {n} ספקים",
 
   login_title: "FinanceApp",
   login_sign_in_description: "התחבר לחשבונך",
@@ -710,6 +784,7 @@ const he: Translations = {
   import_col_amount: "סכום",
   import_col_category: "קטגוריה",
   import_col_book: "ספר",
+  import_col_tags: "תגיות",
   import_auto_hint: "✦ = קובץ אוטומטי מהיסטוריית ספקים",
   import_importing: "מייבא…",
   import_done_title: "הייבוא הושלם!",
@@ -757,6 +832,7 @@ const he: Translations = {
   form_tag_placeholder: "הוסף תגית…",
   form_add_tag: "הוסף",
   form_auto_suggested: "הוצע אוטומטית מהיסטוריית ספקים",
+  form_suggested_prefix: "מוצע:",
   form_receipt: "קבלה",
   form_attach_photo: "צרף תמונה",
   form_receipt_attached: "קבלה כבר מצורפת",
@@ -780,6 +856,27 @@ const he: Translations = {
   picker_create: "צור",
 
   fab_add_transaction: "הוסף עסקה",
+
+  tags_tab: "תגיות",
+  tags_title: "תגיות",
+  tags_add: "תגית חדשה",
+  tags_no_tags: "אין תגיות עדיין. צור תגית לסימון הוצאות.",
+  tags_name: "שם",
+  tags_name_placeholder: "לדוגמה: טיול ביוון",
+  tags_color: "צבע",
+  tags_create_title: "תגית חדשה",
+  tags_edit_title: "עריכת תגית",
+  tags_create: "צור",
+  tags_save: "שמור",
+  tags_saving: "שומר…",
+  tags_cancel: "ביטול",
+  tags_delete_confirm: "עסקאות עם תגית זו לא יימחקו.",
+  tags_stats_spent: "סה״כ הוצאה",
+  tags_stats_transactions: "עסקאות",
+  tags_stats_empty: "אין הוצאות החודש.",
+  tags_picker_search: "חפש או צור תגית…",
+  tags_picker_no_results: "לא נמצאו תגיות.",
+  tags_picker_create: "צור",
 };
 
 export const translations: Record<Locale, Translations> = { en, he };

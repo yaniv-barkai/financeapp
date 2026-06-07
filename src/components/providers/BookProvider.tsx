@@ -5,11 +5,12 @@ import { useAuth } from "./AuthProvider";
 import { useAppStore } from "@/lib/store";
 import { getCategories } from "@/lib/firestore/categories";
 import { getMerchants } from "@/lib/firestore/merchants";
+import { getTags } from "@/lib/firestore/tags";
 import { reconcileRecurring } from "@/lib/firestore/recurring";
 
 export function BookProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const { activeBookId, setCategories, setMerchants } = useAppStore();
+  const { activeBookId, setCategories, setMerchants, setTags } = useAppStore();
 
   useEffect(() => {
     if (!user || !activeBookId) return;
@@ -17,13 +18,15 @@ export function BookProvider({ children }: { children: React.ReactNode }) {
 
     const load = async (attempt = 0): Promise<void> => {
       try {
-        const [cats, merchants] = await Promise.all([
+        const [cats, merchants, tags] = await Promise.all([
           getCategories(user.uid, activeBookId),
           getMerchants(user.uid, activeBookId),
+          getTags(user.uid, activeBookId),
         ]);
         if (!cancelled) {
           setCategories(cats);
           setMerchants(merchants);
+          setTags(tags);
           reconcileRecurring(user.uid, activeBookId).catch(console.error);
         }
       } catch (err: unknown) {

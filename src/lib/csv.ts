@@ -136,6 +136,7 @@ export function buildImportRows(
         bookId: opts.defaultBookId,
         skip: false,
         isDuplicate: false,
+        tags: [],
       } as ImportRow;
     })
     .filter((r) => r.amount > 0);

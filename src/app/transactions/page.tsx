@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Edit, Trash2, ArrowRightLeft, Tag } from "lucide-react";
+import { Edit, Trash2, ArrowRightLeft, RefreshCw } from "lucide-react";
+import { Timestamp } from "firebase/firestore";
+import { addMonths, addWeeks, addYears } from "date-fns";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useAppStore } from "@/lib/store";
 import { useLocale } from "@/components/providers/LocaleProvider";
@@ -10,7 +12,8 @@ import {
   deleteTransaction,
   transferTransaction,
 } from "@/lib/firestore/transactions";
-import { Transaction } from "@/lib/types";
+import { addRecurring } from "@/lib/firestore/recurring";
+import { Transaction, RecurringCadence } from "@/lib/types";
 import { formatCurrency, formatDate, getMonthRange } from "@/lib/utils";
 import { MonthSwitcher } from "@/components/dashboard/MonthSwitcher";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
@@ -43,7 +46,7 @@ import { useConfirm } from "@/components/providers/ConfirmProvider";
 
 export default function TransactionsPage() {
   const { user, loading } = useRequireAuth();
-  const { activeBookId, categories, currency, activeMonth, books } = useAppStore();
+  const { activeBookId, categories, tags, currency, activeMonth, books, txVersion } = useAppStore();
   const { t } = useLocale();
 
   const confirm = useConfirm();
@@ -56,6 +59,9 @@ export default function TransactionsPage() {
   const [transferTx, setTransferTx] = useState<Transaction | null>(null);
   const [transferBookId, setTransferBookId] = useState("");
   const [transferring, setTransferring] = useState(false);
+  const [convertTx, setConvertTx] = useState<Transaction | null>(null);
+  const [convertCadence, setConvertCadence] = useState<RecurringCadence>("monthly");
+  const [converting, setConverting] = useState(false);
 
   const { start, end } = getMonthRange(activeMonth);
 
@@ -67,7 +73,7 @@ export default function TransactionsPage() {
 
   useEffect(() => {
     loadData();
-  }, [user, activeBookId, activeMonth]);
+  }, [user, activeBookId, activeMonth, txVersion]);
 
   const filtered = useMemo(() => {
     return transactions.filter((tx) => {
@@ -86,11 +92,17 @@ export default function TransactionsPage() {
     });
   }, [transactions, filterCat, filterType, filterTag, searchText]);
 
-  const allTags = useMemo(() => {
+  // Only show tags that appear in transactions this month
+  const usedTagIds = useMemo(() => {
     const set = new Set<string>();
-    transactions.forEach((tx) => tx.tags?.forEach((tag) => set.add(tag)));
-    return Array.from(set).sort();
+    transactions.forEach((tx) => tx.tags?.forEach((id) => set.add(id)));
+    return set;
   }, [transactions]);
+
+  const usedTags = useMemo(
+    () => tags.filter((tag) => usedTagIds.has(tag.id)),
+    [tags, usedTagIds]
+  );
 
   const handleDelete = async (tx: Transaction) => {
     if (!user || !activeBookId) return;
@@ -114,6 +126,32 @@ export default function TransactionsPage() {
       loadData();
     } finally {
       setTransferring(false);
+    }
+  };
+
+  const handleConvertToRecurring = async () => {
+    if (!user || !activeBookId || !convertTx) return;
+    setConverting(true);
+    try {
+      const txDate = convertTx.date.toDate();
+      let nextRun: Date;
+      if (convertCadence === "weekly") nextRun = addWeeks(txDate, 1);
+      else if (convertCadence === "yearly") nextRun = addYears(txDate, 1);
+      else nextRun = addMonths(txDate, 1);
+
+      await addRecurring(user.uid, activeBookId, {
+        type: convertTx.type,
+        amount: convertTx.amount,
+        categoryId: convertTx.categoryId,
+        ...(convertTx.merchantDisplay && { merchantDisplay: convertTx.merchantDisplay }),
+        ...(convertTx.note && { note: convertTx.note }),
+        cadence: convertCadence,
+        nextRunDate: Timestamp.fromDate(nextRun),
+        active: true,
+      });
+      setConvertTx(null);
+    } finally {
+      setConverting(false);
     }
   };
 
@@ -153,15 +191,20 @@ export default function TransactionsPage() {
             placeholder={t.transactions_all_categories}
           />
         </div>
-        {allTags.length > 0 && (
-          <Select value={filterTag} onValueChange={(v) => setFilterTag(v === filterTag ? "" : v)}>
+        {usedTags.length > 0 && (
+          <Select value={filterTag || "all"} onValueChange={(v) => setFilterTag(v === "all" ? "" : v === filterTag ? "" : v)}>
             <SelectTrigger className="h-9 w-36">
               <SelectValue placeholder={t.transactions_all_tags} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">{t.transactions_all_tags}</SelectItem>
-              {allTags.map((tag) => (
-                <SelectItem key={tag} value={tag}>#{tag}</SelectItem>
+              <SelectItem value="all">{t.transactions_all_tags}</SelectItem>
+              {usedTags.map((tag) => (
+                <SelectItem key={tag.id} value={tag.id}>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: tag.color }} />
+                    {tag.name}
+                  </span>
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -182,6 +225,9 @@ export default function TransactionsPage() {
           )}
           {filtered.map((tx) => {
             const cat = categories.find((c) => c.id === tx.categoryId);
+            const txTags = (tx.tags ?? [])
+              .map((id) => tags.find((tg) => tg.id === id))
+              .filter(Boolean) as typeof tags;
             return (
               <div key={tx.id} className="flex items-center gap-3 px-4 py-3">
                 <span className="text-xl w-8 text-center flex-shrink-0">{cat?.icon ?? "📦"}</span>
@@ -192,11 +238,16 @@ export default function TransactionsPage() {
                   <p className="text-xs text-muted-foreground">
                     {cat?.name} · {formatDate(tx.date.toDate())}
                   </p>
-                  {tx.tags?.length > 0 && (
+                  {txTags.length > 0 && (
                     <div className="flex gap-1 mt-1 flex-wrap">
-                      {tx.tags.map((tag) => (
-                        <Badge key={tag} variant="outline" className="text-xs py-0 h-5 gap-1">
-                          <Tag className="h-2.5 w-2.5" />#{tag}
+                      {txTags.map((tag) => (
+                        <Badge
+                          key={tag.id}
+                          variant="outline"
+                          className="text-xs py-0 h-5 gap-1"
+                          style={{ borderColor: tag.color + "55", color: tag.color, backgroundColor: tag.color + "11" }}
+                        >
+                          {tag.name}
                         </Badge>
                       ))}
                     </div>
@@ -219,6 +270,9 @@ export default function TransactionsPage() {
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => setEditTx(tx)}>
                       <Edit className="h-4 w-4 me-2" /> {t.transactions_edit}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setConvertTx(tx); setConvertCadence("monthly"); }}>
+                      <RefreshCw className="h-4 w-4 me-2" /> {t.transactions_convert_to_recurring}
                     </DropdownMenuItem>
                     {otherBooks.length > 0 && (
                       <DropdownMenuItem onClick={() => { setTransferTx(tx); setTransferBookId(otherBooks[0].id); }}>
@@ -251,6 +305,44 @@ export default function TransactionsPage() {
               existing={editTx}
               onDone={() => { setEditTx(null); loadData(); }}
             />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Convert to recurring dialog */}
+      <Dialog open={!!convertTx} onOpenChange={(o) => !o && setConvertTx(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t.transactions_recurring_dialog_title}</DialogTitle>
+          </DialogHeader>
+          {convertTx && (
+            <div className="space-y-4">
+              <div className="rounded-lg bg-muted/50 px-4 py-3 text-sm space-y-1">
+                <p className="font-medium">{convertTx.merchantDisplay || categories.find((c) => c.id === convertTx.categoryId)?.name}</p>
+                <p className="text-muted-foreground">
+                  {formatCurrency(convertTx.amount, currency)} · {categories.find((c) => c.id === convertTx.categoryId)?.name}
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-sm font-medium">{t.transactions_recurring_cadence}</p>
+                <Select value={convertCadence} onValueChange={(v) => setConvertCadence(v as RecurringCadence)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">{t.recurring_weekly}</SelectItem>
+                    <SelectItem value="monthly">{t.recurring_monthly}</SelectItem>
+                    <SelectItem value="yearly">{t.recurring_yearly}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setConvertTx(null)}>{t.transactions_cancel}</Button>
+                <Button className="flex-1" onClick={handleConvertToRecurring} disabled={converting}>
+                  {converting ? t.transactions_recurring_converting : t.transactions_recurring_convert}
+                </Button>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>

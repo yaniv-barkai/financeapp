@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Upload, CheckCircle2, Monitor } from "lucide-react";
+import { Upload, CheckCircle2, Sparkles } from "lucide-react";
 import { Timestamp } from "firebase/firestore";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -12,8 +12,8 @@ import { batchImportTransactions } from "@/lib/firestore/transactions";
 import { getMerchants } from "@/lib/firestore/merchants";
 import { ImportRow } from "@/lib/types";
 import { CategoryPicker } from "@/components/transactions/CategoryPicker";
+import { TagPicker } from "@/components/transactions/TagPicker";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -25,7 +25,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMemo } from "react";
 
 type Step = "upload" | "map" | "review" | "done";
@@ -33,8 +32,8 @@ type Step = "upload" | "map" | "review" | "done";
 export default function ImportPage() {
   const { loading } = useRequireAuth();
   const { user } = useAuth();
-  const { activeBookId, books, merchants, categories, currency } = useAppStore();
-  const { t } = useLocale();
+  const { activeBookId, books, merchants, categories, tags, currency } = useAppStore();
+  const { t, locale } = useLocale();
 
   const [step, setStep] = useState<Step>("upload");
   const [csvText, setCsvText] = useState("");
@@ -52,8 +51,10 @@ export default function ImportPage() {
   const [rows, setRows] = useState<ImportRow[]>([]);
   const [importing, setImporting] = useState(false);
   const [importedCount, setImportedCount] = useState(0);
+  const [aiCategorizing, setAiCategorizing] = useState(false);
+  const [aiDoneCount, setAiDoneCount] = useState<number | null>(null);
 
-  const defaultCategoryId = categories.find((c) => c.type === "expense")?.id ?? "";
+  const defaultCategoryId = "";
 
   const merchantMemory = useMemo(() => {
     const mem: Record<string, string> = {};
@@ -110,26 +111,27 @@ export default function ImportPage() {
     setRows((prev) => prev.map((r) => r.skip ? r : { ...r, categoryId }));
   };
 
-  const selectedCount = rows.filter((r) => !r.skip).length;
+  // Only rows that have a category, are not skipped, and not yet imported
+  const readyToImport = rows.filter((r) => !r.skip && r.categoryId && !r.imported);
+  const alreadyImported = rows.filter((r) => r.imported).length;
+  const uncategorized = rows.filter((r) => !r.skip && !r.categoryId && !r.imported).length;
 
   const handleImport = async () => {
-    if (!user) return;
+    if (!user || readyToImport.length === 0) return;
     setImporting(true);
     try {
-      const toImport = rows.filter((r) => !r.skip);
-
-      // Group rows by the book they should be imported into
-      const byBook = new Map<string, typeof toImport>();
-      for (const r of toImport) {
+      const byBook = new Map<string, typeof readyToImport>();
+      for (const r of readyToImport) {
         const bid = r.bookId || activeBookId || "";
         if (!byBook.has(bid)) byBook.set(bid, []);
         byBook.get(bid)!.push(r);
       }
 
-      let totalCount = 0;
+      const importedIds = new Set<string>();
       for (const [bookId, bookRows] of byBook) {
         const merchantUpdates: Array<{ normalized: string; display: string; categoryId: string }> = [];
         const txRows = bookRows.map((r) => {
+          importedIds.add(r.id);
           if (r.merchantNormalized) {
             merchantUpdates.push({
               normalized: r.merchantNormalized,
@@ -144,23 +146,60 @@ export default function ImportPage() {
             ...(r.merchantDisplay ? { merchantDisplay: r.merchantDisplay } : {}),
             ...(r.merchantNormalized ? { merchantNormalized: r.merchantNormalized } : {}),
             date: Timestamp.fromDate(r.date),
-            tags: [],
+            tags: r.tags ?? [],
           };
         });
         await batchImportTransactions(user.uid, bookId, txRows, merchantUpdates);
-        totalCount += txRows.length;
       }
+
+      // Mark rows as imported
+      setRows((prev) => prev.map((r) => importedIds.has(r.id) ? { ...r, imported: true } : r));
+      setImportedCount((c) => c + importedIds.size);
 
       // Refresh merchants for the active book
       if (activeBookId) {
         const updated = await getMerchants(user.uid, activeBookId);
         useAppStore.getState().setMerchants(updated);
       }
-
-      setImportedCount(totalCount);
-      setStep("done");
     } finally {
       setImporting(false);
+    }
+  };
+
+  const handleAiCategorize = async () => {
+    setAiCategorizing(true);
+    setAiDoneCount(null);
+    try {
+      const uncategorized = rows.filter((r) => !r.skip);
+      const uniqueMerchants = [...new Set(uncategorized.map((r) => r.merchantDisplay).filter(Boolean))];
+
+      const res = await fetch("/api/categorize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          merchants: uniqueMerchants,
+          categories: categories.map((c) => ({
+            id: c.id,
+            name: c.name,
+            nameEn: c.nameEn,
+            icon: c.icon,
+            type: c.type,
+          })),
+        }),
+      });
+      const { matches } = await res.json() as { matches: Record<string, string> };
+
+      let count = 0;
+      setRows((prev) =>
+        prev.map((r) => {
+          const catId = matches[r.merchantDisplay];
+          if (catId) { count++; return { ...r, categoryId: catId }; }
+          return r;
+        })
+      );
+      setAiDoneCount(count);
+    } finally {
+      setAiCategorizing(false);
     }
   };
 
@@ -183,18 +222,7 @@ export default function ImportPage() {
   if (loading) return null;
 
   return (
-    <div className="space-y-5 max-w-3xl">
-      {/* Mobile-only notice */}
-      <div className="sm:hidden flex flex-col items-center justify-center gap-4 py-16 text-center px-6">
-        <Monitor className="h-12 w-12 text-muted-foreground" />
-        <div>
-          <p className="font-semibold text-base">{t.import_title}</p>
-          <p className="text-sm text-muted-foreground mt-1">{t.import_desktop_only}</p>
-        </div>
-      </div>
-
-      {/* Desktop-only content */}
-      <div className="hidden sm:contents">
+    <div className="space-y-5 max-w-5xl">
       <h1 className="text-2xl font-bold">{t.import_title}</h1>
 
       {/* Steps indicator */}
@@ -327,10 +355,32 @@ export default function ImportPage() {
       {step === "review" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <p className="text-sm text-muted-foreground">
-              {selectedCount} / {rows.length}{" "}
-              {merchants.length > 0 && ` · ${rows.filter((r) => r.suggestedCategoryId).length} auto`}
-            </p>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 text-sm">
+                {alreadyImported > 0 && (
+                  <span className="text-green-600 font-medium">✓ {alreadyImported} imported</span>
+                )}
+                {readyToImport.length > 0 && (
+                  <span className="text-primary font-medium">{readyToImport.length} ready</span>
+                )}
+                {uncategorized > 0 && (
+                  <span className="text-muted-foreground">{uncategorized} uncategorized</span>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={handleAiCategorize}
+                disabled={aiCategorizing}
+              >
+                <Sparkles className={`h-3.5 w-3.5 ${aiCategorizing ? "animate-pulse text-yellow-500" : "text-yellow-500"}`} />
+                {aiCategorizing ? "Asking AI…" : "AI Categorize"}
+              </Button>
+              {aiDoneCount !== null && (
+                <span className="text-xs text-muted-foreground">✓ {aiDoneCount} matched</span>
+              )}
+            </div>
             <div className="flex gap-2 items-center">
               <Label className="text-sm">{t.import_bulk_assign}</Label>
               <div className="w-44">
@@ -339,15 +389,16 @@ export default function ImportPage() {
             </div>
           </div>
 
-          <ScrollArea className="h-[500px] rounded-lg border">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-background border-b">
+          <div className="rounded-lg border overflow-auto" style={{ maxHeight: "calc(100vh - 280px)" }}>
+            <table className="w-full text-sm" dir={locale === "he" ? "rtl" : "ltr"}>
+              <thead className="sticky top-0 bg-background border-b z-10">
                 <tr>
-                  <th className="text-start px-3 py-2 font-medium">{t.import_col_skip}</th>
-                  <th className="text-start px-3 py-2 font-medium">{t.import_col_date}</th>
-                  <th className="text-start px-3 py-2 font-medium">{t.import_col_merchant}</th>
-                  <th className="text-start px-3 py-2 font-medium">{t.import_col_amount}</th>
+                  <th className="text-start px-3 py-2 font-medium w-12">{t.import_col_skip}</th>
+                  <th className="text-start px-3 py-2 font-medium whitespace-nowrap">{t.import_col_date}</th>
+                  <th className="text-start px-3 py-2 font-medium min-w-[220px]">{t.import_col_merchant}</th>
+                  <th className="text-start px-3 py-2 font-medium whitespace-nowrap">{t.import_col_amount}</th>
                   <th className="text-start px-3 py-2 font-medium">{t.import_col_category}</th>
+                  <th className="text-start px-3 py-2 font-medium">{t.import_col_tags}</th>
                   {books.length > 1 && (
                     <th className="text-start px-3 py-2 font-medium">{t.import_col_book}</th>
                   )}
@@ -355,63 +406,107 @@ export default function ImportPage() {
               </thead>
               <tbody className="divide-y">
                 {rows.map((row) => (
-                  <tr key={row.id} className={`${row.skip ? "opacity-40" : ""}`}>
-                    <td className="px-3 py-2">
-                      <Switch
-                        checked={!row.skip}
-                        onCheckedChange={(v) => updateRow(row.id, { skip: !v })}
-                        className="scale-75"
-                      />
+                  <tr
+                    key={row.id}
+                    className={`${row.imported ? "bg-green-50 dark:bg-green-950/20" : row.skip ? "opacity-40" : ""}`}
+                  >
+                    <td className="px-3 py-2 w-12">
+                      {row.imported ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto" />
+                      ) : (
+                        <Switch
+                          checked={!row.skip}
+                          onCheckedChange={(v) => updateRow(row.id, { skip: !v })}
+                          className="scale-75"
+                        />
+                      )}
                     </td>
                     <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
                       {formatDate(row.date)}
                     </td>
-                    <td className="px-3 py-2 max-w-[160px] truncate">
-                      {row.merchantDisplay}
-                      {row.suggestedCategoryId && row.categoryId === row.suggestedCategoryId && (
-                        <span className="ms-1 text-xs text-primary">✦</span>
-                      )}
+                    <td className="px-3 py-2 min-w-[220px] max-w-[280px] align-middle" title={row.merchantDisplay}>
+                      <span className="break-words leading-snug">
+                        {row.merchantDisplay}
+                        {row.suggestedCategoryId && row.categoryId === row.suggestedCategoryId && (
+                          <span className="ms-1 text-xs text-primary">✦</span>
+                        )}
+                      </span>
                     </td>
                     <td className={`px-3 py-2 font-mono whitespace-nowrap ${row.type === "income" ? "text-green-600" : "text-red-500"}`}>
                       {row.type === "income" ? "+" : "-"}{formatCurrency(row.amount, currency)}
                     </td>
                     <td className="px-3 py-1.5 min-w-[160px]">
-                      <CategoryPicker
-                        value={row.categoryId}
-                        onChange={(v) => updateRow(row.id, { categoryId: v })}
-                        typeFilter={row.type}
-                      />
+                      {row.imported ? (
+                        <span className="text-xs text-muted-foreground">
+                          {categories.find((c) => c.id === row.categoryId)?.name ?? row.categoryId}
+                        </span>
+                      ) : (
+                        <CategoryPicker
+                          value={row.categoryId}
+                          onChange={(v) => updateRow(row.id, { categoryId: v })}
+                          typeFilter={row.type}
+                        />
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5 min-w-[200px]">
+                      {row.imported ? (
+                        <span className="text-xs text-muted-foreground">
+                          {row.tags.map((id) => tags.find((tg) => tg.id === id)?.name).filter(Boolean).join(", ")}
+                        </span>
+                      ) : (
+                        <TagPicker
+                          value={row.tags}
+                          onChange={(t) => updateRow(row.id, { tags: t })}
+                        />
+                      )}
                     </td>
                     {books.length > 1 && (
                       <td className="px-3 py-1.5 min-w-[130px]">
-                        <Select
-                          value={row.bookId}
-                          onValueChange={(v) => updateRow(row.id, { bookId: v })}
-                        >
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {books.map((b) => (
-                              <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        {row.imported ? (
+                          <span className="text-xs text-muted-foreground">
+                            {books.find((b) => b.id === row.bookId)?.name}
+                          </span>
+                        ) : (
+                          <Select
+                            value={row.bookId}
+                            onValueChange={(v) => updateRow(row.id, { bookId: v })}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {books.map((b) => (
+                                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                       </td>
                     )}
                   </tr>
                 ))}
               </tbody>
             </table>
-          </ScrollArea>
+          </div>
 
           <div className="text-xs text-muted-foreground">{t.import_auto_hint}</div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button variant="outline" onClick={() => setStep("map")}>{t.import_back}</Button>
-            <Button onClick={handleImport} disabled={importing || selectedCount === 0}>
-              {importing ? t.import_importing : `${t.import_title} ${selectedCount}`}
+            <Button
+              onClick={handleImport}
+              disabled={importing || readyToImport.length === 0}
+            >
+              {importing
+                ? t.import_importing
+                : `Import ${readyToImport.length} categorized`}
             </Button>
+            {alreadyImported > 0 && uncategorized === 0 && readyToImport.length === 0 && (
+              <Button variant="outline" onClick={() => setStep("done")}>
+                <CheckCircle2 className="h-4 w-4 me-2 text-green-500" />
+                All done — finish
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -434,7 +529,6 @@ export default function ImportPage() {
           </CardContent>
         </Card>
       )}
-      </div>{/* end sm:contents */}
     </div>
   );
 }
