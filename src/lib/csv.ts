@@ -48,6 +48,34 @@ export function autoDetectColumns(headers: string[]): {
   };
 }
 
+export type DateFormat = "auto" | "DMY" | "MDY" | "YMD";
+
+function parseDateWithFormat(raw: string, format: DateFormat): Date {
+  if (format === "auto") {
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? new Date() : d;
+  }
+  // Split on common separators: - / . space
+  const parts = raw.split(/[-/.\\s]+/);
+  if (parts.length !== 3) {
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? new Date() : d;
+  }
+  let day: number, month: number, year: number;
+  if (format === "DMY") {
+    [day, month, year] = parts.map(Number);
+  } else if (format === "MDY") {
+    [month, day, year] = parts.map(Number);
+  } else {
+    // YMD
+    [year, month, day] = parts.map(Number);
+  }
+  // Handle 2-digit years
+  if (year < 100) year += year < 50 ? 2000 : 1900;
+  const d = new Date(year, month - 1, day);
+  return isNaN(d.getTime()) ? new Date() : d;
+}
+
 export function buildImportRows(
   rows: Record<string, string>[],
   opts: {
@@ -59,8 +87,11 @@ export function buildImportRows(
     negativeIsExpense: boolean;
     merchantMemory: Record<string, string>;
     defaultCategoryId: string;
+    defaultBookId: string;
+    dateFormat?: DateFormat;
   }
 ): ImportRow[] {
+  const dateFormat: DateFormat = opts.dateFormat ?? "auto";
   return rows
     .map((row, i) => {
       const dateRaw = row[opts.dateCol] ?? "";
@@ -89,8 +120,7 @@ export function buildImportRows(
         }
       }
 
-      const parsedDate = new Date(dateRaw);
-      const date = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+      const date = parseDateWithFormat(dateRaw, dateFormat);
       const normalized = normalizemerchant(merchantRaw);
       const suggestedCategoryId = opts.merchantMemory[normalized] ?? undefined;
 
@@ -103,6 +133,7 @@ export function buildImportRows(
         type,
         categoryId: suggestedCategoryId ?? opts.defaultCategoryId,
         suggestedCategoryId,
+        bookId: opts.defaultBookId,
         skip: false,
         isDuplicate: false,
       } as ImportRow;

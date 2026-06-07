@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { EmojiPickerButton } from "@/components/ui/EmojiPickerButton";
 
 interface Props {
   value: string;
@@ -202,11 +203,9 @@ export function CategoryPicker({ value, onChange, typeFilter, placeholder }: Pro
             </div>
             <div className="space-y-1.5">
               <Label>{t.picker_icon}</Label>
-              <Input
+              <EmojiPickerButton
                 value={newIcon}
-                onChange={(e) => setNewIcon(e.target.value)}
-                className="w-20 text-center text-xl"
-                maxLength={2}
+                onChange={(emoji) => setNewIcon(emoji)}
               />
             </div>
             <div className="space-y-1.5">

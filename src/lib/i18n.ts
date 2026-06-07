@@ -172,6 +172,11 @@ export interface Translations {
   import_map_title: string;
   import_map_detected: string;
   import_date_col: string;
+  import_date_format: string;
+  import_date_format_auto: string;
+  import_date_format_dmy: string;
+  import_date_format_mdy: string;
+  import_date_format_ymd: string;
   import_merchant_col: string;
   import_none: string;
   import_debit_credit_toggle: string;
@@ -188,6 +193,7 @@ export interface Translations {
   import_col_merchant: string;
   import_col_amount: string;
   import_col_category: string;
+  import_col_book: string;
   import_auto_hint: string;
   import_importing: string;
   import_done_title: string;
@@ -426,6 +432,11 @@ const en: Translations = {
   import_map_title: "Map Columns",
   import_map_detected: "We detected {n} columns. Match them to the right fields.",
   import_date_col: "Date column *",
+  import_date_format: "Date format",
+  import_date_format_auto: "Auto-detect",
+  import_date_format_dmy: "DD/MM/YYYY (e.g. 01-02-2026)",
+  import_date_format_mdy: "MM/DD/YYYY (e.g. 02-01-2026)",
+  import_date_format_ymd: "YYYY-MM-DD (e.g. 2026-02-01)",
   import_merchant_col: "Merchant / Description *",
   import_none: "-- none --",
   import_debit_credit_toggle: "Separate Debit / Credit columns",
@@ -442,6 +453,7 @@ const en: Translations = {
   import_col_merchant: "Merchant",
   import_col_amount: "Amount",
   import_col_category: "Category",
+  import_col_book: "Book",
   import_auto_hint: "✦ = auto-categorized from merchant history",
   import_importing: "Importing…",
   import_done_title: "Import complete!",
@@ -676,6 +688,11 @@ const he: Translations = {
   import_map_title: "מיפוי עמודות",
   import_map_detected: "זיהינו {n} עמודות. התאם אותן לשדות הנכונים.",
   import_date_col: "עמודת תאריך *",
+  import_date_format: "פורמט תאריך",
+  import_date_format_auto: "זיהוי אוטומטי",
+  import_date_format_dmy: "DD/MM/YYYY (לדוגמה: 01-02-2026)",
+  import_date_format_mdy: "MM/DD/YYYY (לדוגמה: 02-01-2026)",
+  import_date_format_ymd: "YYYY-MM-DD (לדוגמה: 2026-02-01)",
   import_merchant_col: "ספק / תיאור *",
   import_none: "-- ללא --",
   import_debit_credit_toggle: "עמודות חיוב / זיכוי נפרדות",
@@ -692,6 +709,7 @@ const he: Translations = {
   import_col_merchant: "ספק",
   import_col_amount: "סכום",
   import_col_category: "קטגוריה",
+  import_col_book: "ספר",
   import_auto_hint: "✦ = קובץ אוטומטי מהיסטוריית ספקים",
   import_importing: "מייבא…",
   import_done_title: "הייבוא הושלם!",

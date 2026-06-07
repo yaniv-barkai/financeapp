@@ -97,6 +97,7 @@ export interface ImportRow {
   type: TransactionType;
   categoryId: string;
   suggestedCategoryId?: string;
+  bookId: string;
   skip: boolean;
   isDuplicate?: boolean;
 }

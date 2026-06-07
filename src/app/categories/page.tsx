@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/dialog";
 import { formatCurrency, getCategoryDisplayName, translateHeToEn } from "@/lib/utils";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
+import { EmojiPickerButton } from "@/components/ui/EmojiPickerButton";
 
 
 const CAT_COLORS = [
@@ -429,11 +430,9 @@ export default function CategoriesPage() {
             </div>
             <div className="space-y-1.5">
               <Label>{t.categories_icon}</Label>
-              <Input
+              <EmojiPickerButton
                 value={form.icon}
-                onChange={(e) => setForm((f) => ({ ...f, icon: e.target.value }))}
-                className="w-20 text-center text-2xl"
-                maxLength={2}
+                onChange={(emoji) => setForm((f) => ({ ...f, icon: emoji }))}
               />
             </div>
             <div className="space-y-1.5">

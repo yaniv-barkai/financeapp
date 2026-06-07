@@ -7,7 +7,7 @@ import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useAppStore } from "@/lib/store";
 import { useLocale } from "@/components/providers/LocaleProvider";
-import { parseCsvText, autoDetectColumns, buildImportRows } from "@/lib/csv";
+import { parseCsvText, autoDetectColumns, buildImportRows, DateFormat } from "@/lib/csv";
 import { batchImportTransactions } from "@/lib/firestore/transactions";
 import { getMerchants } from "@/lib/firestore/merchants";
 import { ImportRow } from "@/lib/types";
@@ -33,7 +33,7 @@ type Step = "upload" | "map" | "review" | "done";
 export default function ImportPage() {
   const { loading } = useRequireAuth();
   const { user } = useAuth();
-  const { activeBookId, merchants, categories, currency } = useAppStore();
+  const { activeBookId, books, merchants, categories, currency } = useAppStore();
   const { t } = useLocale();
 
   const [step, setStep] = useState<Step>("upload");
@@ -47,6 +47,7 @@ export default function ImportPage() {
   const [creditCol, setCreditCol] = useState("");
   const [negativeIsExpense, setNegativeIsExpense] = useState(true);
   const [useDebitCredit, setUseDebitCredit] = useState(false);
+  const [dateFormat, setDateFormat] = useState<DateFormat>("auto");
 
   const [rows, setRows] = useState<ImportRow[]>([]);
   const [importing, setImporting] = useState(false);
@@ -94,6 +95,8 @@ export default function ImportPage() {
       negativeIsExpense,
       merchantMemory,
       defaultCategoryId,
+      defaultBookId: activeBookId ?? books[0]?.id ?? "",
+      dateFormat,
     });
     setRows(built);
     setStep("review");
@@ -110,37 +113,51 @@ export default function ImportPage() {
   const selectedCount = rows.filter((r) => !r.skip).length;
 
   const handleImport = async () => {
-    if (!user || !activeBookId) return;
+    if (!user) return;
     setImporting(true);
     try {
       const toImport = rows.filter((r) => !r.skip);
-      const merchantUpdates: Array<{ normalized: string; display: string; categoryId: string }> = [];
-      const txRows = toImport.map((r) => {
-        if (r.merchantNormalized) {
-          merchantUpdates.push({
-            normalized: r.merchantNormalized,
-            display: r.merchantDisplay,
+
+      // Group rows by the book they should be imported into
+      const byBook = new Map<string, typeof toImport>();
+      for (const r of toImport) {
+        const bid = r.bookId || activeBookId || "";
+        if (!byBook.has(bid)) byBook.set(bid, []);
+        byBook.get(bid)!.push(r);
+      }
+
+      let totalCount = 0;
+      for (const [bookId, bookRows] of byBook) {
+        const merchantUpdates: Array<{ normalized: string; display: string; categoryId: string }> = [];
+        const txRows = bookRows.map((r) => {
+          if (r.merchantNormalized) {
+            merchantUpdates.push({
+              normalized: r.merchantNormalized,
+              display: r.merchantDisplay,
+              categoryId: r.categoryId,
+            });
+          }
+          return {
+            type: r.type,
+            amount: r.amount,
             categoryId: r.categoryId,
-          });
-        }
-        return {
-          type: r.type,
-          amount: r.amount,
-          categoryId: r.categoryId,
-          merchantDisplay: r.merchantDisplay || undefined,
-          merchantNormalized: r.merchantNormalized || undefined,
-          date: Timestamp.fromDate(r.date),
-          tags: [],
-        };
-      });
+            ...(r.merchantDisplay ? { merchantDisplay: r.merchantDisplay } : {}),
+            ...(r.merchantNormalized ? { merchantNormalized: r.merchantNormalized } : {}),
+            date: Timestamp.fromDate(r.date),
+            tags: [],
+          };
+        });
+        await batchImportTransactions(user.uid, bookId, txRows, merchantUpdates);
+        totalCount += txRows.length;
+      }
 
-      await batchImportTransactions(user.uid, activeBookId, txRows, merchantUpdates);
+      // Refresh merchants for the active book
+      if (activeBookId) {
+        const updated = await getMerchants(user.uid, activeBookId);
+        useAppStore.getState().setMerchants(updated);
+      }
 
-      const updated = await getMerchants(user.uid, activeBookId);
-      const { setMerchants } = useAppStore.getState();
-      setMerchants(updated);
-
-      setImportedCount(txRows.length);
+      setImportedCount(totalCount);
       setStep("done");
     } finally {
       setImporting(false);
@@ -153,6 +170,7 @@ export default function ImportPage() {
     setHeaders([]);
     setRows([]);
     setImportedCount(0);
+    setDateFormat("auto");
   };
 
   const stepLabels: Record<Step, string> = {
@@ -228,11 +246,29 @@ export default function ImportPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>{t.import_merchant_col}</Label>
-                <Select value={merchantCol} onValueChange={setMerchantCol}>
+                <Label>{t.import_date_format}</Label>
+                <Select value={dateFormat} onValueChange={(v) => setDateFormat(v as DateFormat)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t.import_none}</SelectItem>
+                    <SelectItem value="auto">{t.import_date_format_auto}</SelectItem>
+                    <SelectItem value="DMY">{t.import_date_format_dmy}</SelectItem>
+                    <SelectItem value="MDY">{t.import_date_format_mdy}</SelectItem>
+                    <SelectItem value="YMD">{t.import_date_format_ymd}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>{t.import_merchant_col}</Label>
+                <Select
+                  value={merchantCol === "" ? "__none__" : merchantCol}
+                  onValueChange={(v) => setMerchantCol(v === "__none__" ? "" : v)}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">{t.import_none}</SelectItem>
                     {headers.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -312,6 +348,9 @@ export default function ImportPage() {
                   <th className="text-start px-3 py-2 font-medium">{t.import_col_merchant}</th>
                   <th className="text-start px-3 py-2 font-medium">{t.import_col_amount}</th>
                   <th className="text-start px-3 py-2 font-medium">{t.import_col_category}</th>
+                  {books.length > 1 && (
+                    <th className="text-start px-3 py-2 font-medium">{t.import_col_book}</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -343,6 +382,23 @@ export default function ImportPage() {
                         typeFilter={row.type}
                       />
                     </td>
+                    {books.length > 1 && (
+                      <td className="px-3 py-1.5 min-w-[130px]">
+                        <Select
+                          value={row.bookId}
+                          onValueChange={(v) => updateRow(row.id, { bookId: v })}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {books.map((b) => (
+                              <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
