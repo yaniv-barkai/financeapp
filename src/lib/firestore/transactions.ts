@@ -20,6 +20,13 @@ function txRef(uid: string, bookId: string) {
   return collection(db, "users", uid, "books", bookId, "transactions");
 }
 
+/** Firestore rejects undefined field values — strip them before write. */
+function withoutUndefined<T extends Record<string, unknown>>(data: T): T {
+  return Object.fromEntries(
+    Object.entries(data).filter(([, v]) => v !== undefined)
+  ) as T;
+}
+
 export async function getTransactionsByMonth(
   uid: string,
   bookId: string,
@@ -52,10 +59,10 @@ export async function addTransaction(
   bookId: string,
   data: Omit<Transaction, "id" | "createdAt">
 ): Promise<string> {
-  const ref = await addDoc(txRef(uid, bookId), {
+  const ref = await addDoc(txRef(uid, bookId), withoutUndefined({
     ...data,
     createdAt: serverTimestamp(),
-  });
+  }));
   return ref.id;
 }
 
@@ -65,7 +72,7 @@ export async function updateTransaction(
   txId: string,
   data: Partial<Omit<Transaction, "id" | "createdAt">>
 ): Promise<void> {
-  await updateDoc(doc(db, "users", uid, "books", bookId, "transactions", txId), data);
+  await updateDoc(doc(db, "users", uid, "books", bookId, "transactions", txId), withoutUndefined(data));
 }
 
 export async function deleteTransaction(

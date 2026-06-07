@@ -12,7 +12,7 @@ import {
   deleteTransaction,
   transferTransaction,
 } from "@/lib/firestore/transactions";
-import { addRecurring } from "@/lib/firestore/recurring";
+import { addRecurring, skipRecurringPeriod } from "@/lib/firestore/recurring";
 import { Transaction, RecurringCadence } from "@/lib/types";
 import { formatCurrency, formatDate, getMonthRange } from "@/lib/utils";
 import { MonthSwitcher } from "@/components/dashboard/MonthSwitcher";
@@ -46,7 +46,7 @@ import { useConfirm } from "@/components/providers/ConfirmProvider";
 
 export default function TransactionsPage() {
   const { user, loading } = useRequireAuth();
-  const { activeBookId, categories, tags, currency, activeMonth, books, txVersion } = useAppStore();
+  const { activeBookId, categories, tags, currency, activeMonth, books, txVersion, bumpTxVersion } = useAppStore();
   const { t } = useLocale();
 
   const confirm = useConfirm();
@@ -114,6 +114,10 @@ export default function TransactionsPage() {
     });
     if (!ok) return;
     await deleteTransaction(user.uid, activeBookId, tx.id);
+    if (tx.recurringId) {
+      await skipRecurringPeriod(user.uid, activeBookId, tx.recurringId, end);
+    }
+    bumpTxVersion();
     loadData();
   };
 
@@ -237,6 +241,11 @@ export default function TransactionsPage() {
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {cat?.name} · {formatDate(tx.date.toDate())}
+                    {tx.recurringId && (
+                      <span className="inline-flex items-center gap-0.5 ms-1">
+                        · <RefreshCw className="h-3 w-3 inline" />
+                      </span>
+                    )}
                   </p>
                   {txTags.length > 0 && (
                     <div className="flex gap-1 mt-1 flex-wrap">

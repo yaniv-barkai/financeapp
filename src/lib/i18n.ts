@@ -43,6 +43,7 @@ export interface Translations {
   dashboard_net: string;
   dashboard_monthly_limits: string;
   dashboard_expenses_by_category: string;
+  dashboard_income_by_category: string;
   dashboard_income_vs_expenses: string;
   dashboard_income_legend: string;
   dashboard_expense_legend: string;
@@ -51,6 +52,9 @@ export interface Translations {
   dashboard_no_transactions: string;
   dashboard_edit_transaction: string;
   dashboard_recurring_uncheck_confirm: string;
+  dashboard_no_category_transactions: string;
+  dashboard_income_wrong_category: string;
+  dashboard_income_missing_category: string;
 
   // Transactions page
   transactions_title: string;
@@ -341,6 +345,7 @@ const en: Translations = {
   dashboard_net: "Net",
   dashboard_monthly_limits: "Monthly Budget",
   dashboard_expenses_by_category: "Expenses by Category",
+  dashboard_income_by_category: "Income by Category",
   dashboard_income_vs_expenses: "Income vs Expenses (6 months)",
   dashboard_income_legend: "Income",
   dashboard_expense_legend: "Expense",
@@ -349,6 +354,9 @@ const en: Translations = {
   dashboard_no_transactions: "No transactions this month. Use the + button to add one!",
   dashboard_edit_transaction: "Edit Transaction",
   dashboard_recurring_uncheck_confirm: "Remove this month's booking for this recurring payment?",
+  dashboard_no_category_transactions: "No transactions in this category this month.",
+  dashboard_income_wrong_category: "Assigned to expense category",
+  dashboard_income_missing_category: "Missing category",
 
   transactions_title: "Transactions",
   transactions_search_placeholder: "Search…",
@@ -629,6 +637,7 @@ const he: Translations = {
   dashboard_net: "נטו",
   dashboard_monthly_limits: "תקציב חודשי",
   dashboard_expenses_by_category: "הוצאות לפי קטגוריה",
+  dashboard_income_by_category: "הכנסות לפי קטגוריה",
   dashboard_income_vs_expenses: "הכנסות מול הוצאות (6 חודשים)",
   dashboard_income_legend: "הכנסות",
   dashboard_expense_legend: "הוצאות",
@@ -637,6 +646,9 @@ const he: Translations = {
   dashboard_no_transactions: "אין עסקאות החודש. לחץ על + כדי להוסיף!",
   dashboard_edit_transaction: "עריכת עסקה",
   dashboard_recurring_uncheck_confirm: "להסיר את הרישום החודשי עבור תשלום קבוע זה?",
+  dashboard_no_category_transactions: "אין עסקאות בקטגוריה זו החודש.",
+  dashboard_income_wrong_category: "משויך לקטגוריית הוצאה",
+  dashboard_income_missing_category: "קטגוריה חסרה",
 
   transactions_title: "עסקאות",
   transactions_search_placeholder: "חיפוש…",

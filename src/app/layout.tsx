@@ -4,10 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { BookProvider } from "@/components/providers/BookProvider";
 import { LocaleProvider } from "@/components/providers/LocaleProvider";
-import { Navbar } from "@/components/layout/Navbar";
-import { GlobalSearch } from "@/components/layout/GlobalSearch";
-import { QuickAddFab } from "@/components/transactions/QuickAddFab";
-import { PwaInit } from "@/components/layout/PwaInit";
+import { AppShell } from "@/components/layout/AppShell";
 import { ConfirmProvider } from "@/components/providers/ConfirmProvider";
 import { Toaster } from "sonner";
 
@@ -76,16 +73,3 @@ export default function RootLayout({
   );
 }
 
-function AppShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen">
-      <Navbar />
-      <GlobalSearch />
-      <main className="sm:ps-56 pt-14 pb-20 sm:pb-6 min-h-screen">
-        <div className="mx-auto max-w-5xl p-4 sm:p-6">{children}</div>
-      </main>
-      <QuickAddFab />
-      <PwaInit />
-    </div>
-  );
-}

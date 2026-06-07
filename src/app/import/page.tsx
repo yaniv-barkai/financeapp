@@ -48,6 +48,7 @@ export default function ImportPage() {
   const [useDebitCredit, setUseDebitCredit] = useState(false);
   const [dateFormat, setDateFormat] = useState<DateFormat>("auto");
 
+  const [csvError, setCsvError] = useState<string | null>(null);
   const [rows, setRows] = useState<ImportRow[]>([]);
   const [importing, setImporting] = useState(false);
   const [importedCount, setImportedCount] = useState(0);
@@ -69,8 +70,15 @@ export default function ImportPage() {
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
       const { headers } = parseCsvText(text);
+      const validHeaders = headers.filter((h) => h.trim() !== "");
+      if (validHeaders.length === 0) {
+        setCsvError("Could not detect any column headers in this CSV file. Please check the file and try again.");
+        e.target.value = "";
+        return;
+      }
+      setCsvError(null);
       setCsvText(text);
-      setHeaders(headers);
+      setHeaders(validHeaders);
 
       const detected = autoDetectColumns(headers);
       setDateCol(detected.dateCol ?? headers[0] ?? "");
@@ -210,6 +218,7 @@ export default function ImportPage() {
     setRows([]);
     setImportedCount(0);
     setDateFormat("auto");
+    setCsvError(null);
   };
 
   const stepLabels: Record<Step, string> = {
@@ -222,7 +231,7 @@ export default function ImportPage() {
   if (loading) return null;
 
   return (
-    <div className="space-y-5 max-w-5xl">
+    <div className="space-y-5">
       <h1 className="text-2xl font-bold">{t.import_title}</h1>
 
       {/* Steps indicator */}
@@ -240,7 +249,7 @@ export default function ImportPage() {
       {/* Step 1: Upload */}
       {step === "upload" && (
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 space-y-4">
             <label className="flex flex-col items-center gap-4 cursor-pointer border-2 border-dashed border-border rounded-xl p-10 hover:border-primary transition-colors">
               <Upload className="h-10 w-10 text-muted-foreground" />
               <div className="text-center">
@@ -250,6 +259,9 @@ export default function ImportPage() {
               <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleFileUpload} />
               <Button variant="outline">{t.import_choose_file}</Button>
             </label>
+            {csvError && (
+              <p className="text-sm text-destructive text-center">{csvError}</p>
+            )}
           </CardContent>
         </Card>
       )}
@@ -389,18 +401,18 @@ export default function ImportPage() {
             </div>
           </div>
 
-          <div className="rounded-lg border overflow-auto" style={{ maxHeight: "calc(100vh - 280px)" }}>
-            <table className="w-full text-sm" dir={locale === "he" ? "rtl" : "ltr"}>
+          <div className="rounded-lg border overflow-x-auto">
+            <table className="w-max min-w-full text-sm table-auto" dir={locale === "he" ? "rtl" : "ltr"}>
               <thead className="sticky top-0 bg-background border-b z-10">
                 <tr>
                   <th className="text-start px-3 py-2 font-medium w-12">{t.import_col_skip}</th>
                   <th className="text-start px-3 py-2 font-medium whitespace-nowrap">{t.import_col_date}</th>
                   <th className="text-start px-3 py-2 font-medium min-w-[220px]">{t.import_col_merchant}</th>
                   <th className="text-start px-3 py-2 font-medium whitespace-nowrap">{t.import_col_amount}</th>
-                  <th className="text-start px-3 py-2 font-medium">{t.import_col_category}</th>
-                  <th className="text-start px-3 py-2 font-medium">{t.import_col_tags}</th>
+                  <th className="text-start px-3 py-2 font-medium min-w-[180px]">{t.import_col_category}</th>
+                  <th className="text-start px-3 py-2 font-medium min-w-[220px]">{t.import_col_tags}</th>
                   {books.length > 1 && (
-                    <th className="text-start px-3 py-2 font-medium">{t.import_col_book}</th>
+                    <th className="text-start px-3 py-2 font-medium min-w-[140px]">{t.import_col_book}</th>
                   )}
                 </tr>
               </thead>
@@ -424,7 +436,7 @@ export default function ImportPage() {
                     <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
                       {formatDate(row.date)}
                     </td>
-                    <td className="px-3 py-2 min-w-[220px] max-w-[280px] align-middle" title={row.merchantDisplay}>
+                    <td className="px-3 py-2 min-w-[220px] align-middle" title={row.merchantDisplay}>
                       <span className="break-words leading-snug">
                         {row.merchantDisplay}
                         {row.suggestedCategoryId && row.categoryId === row.suggestedCategoryId && (
