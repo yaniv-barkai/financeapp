@@ -47,7 +47,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { formatCurrency, getCategoryDisplayName, translateHeToEn, getMonthRange } from "@/lib/utils";
+import { cn, formatCurrency, getCategoryDisplayName, translateHeToEn, getMonthRange } from "@/lib/utils";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
 import { EmojiPickerButton } from "@/components/ui/EmojiPickerButton";
 
@@ -66,14 +66,14 @@ interface CategoryFormData {
 
 // ─── Sortable category row ────────────────────────────────────────────────────
 
-function SortableCatRow({ id, children }: { id: string; children: React.ReactNode }) {
+function SortableCatRow({ id, isRtl, children }: { id: string; isRtl: boolean; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id });
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
-      className="flex items-center gap-2"
+      className={cn("flex items-center gap-2", isRtl && "flex-row-reverse")}
     >
       <div
         {...attributes}
@@ -95,6 +95,7 @@ export default function CategoriesPage() {
   const { user } = useAuth();
   const { activeBookId, categories, setCategories, tags, setTags, currency, activeMonth } = useAppStore();
   const { t, locale } = useLocale();
+  const isRtl = locale === "he";
 
   const confirm = useConfirm();
   const [limits, setLimits] = useState<Record<string, CategoryLimit>>({});
@@ -340,16 +341,16 @@ export default function CategoriesPage() {
               <p className="text-center text-muted-foreground text-sm py-4">{t.categories_no_categories}</p>
             )}
             {sorted.map((cat) => (
-              <SortableCatRow key={cat.id} id={cat.id}>
-                <div className="flex items-center gap-3 px-4 py-3 rounded-lg border bg-card">
+              <SortableCatRow key={cat.id} id={cat.id} isRtl={isRtl}>
+                <div className={cn("flex items-center gap-3 px-4 py-3 rounded-lg border bg-card", isRtl && "flex-row-reverse")}>
                   <span
                     className="text-xl w-9 h-9 flex items-center justify-center rounded-lg flex-shrink-0"
                     style={{ backgroundColor: cat.color + "22" }}
                   >
                     {cat.icon}
                   </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                  <div className={cn("flex-1 min-w-0", isRtl && "text-end")}>
+                    <div className={cn("flex items-center gap-2", isRtl && "justify-end")}>
                       <span className="font-medium text-sm">{getCategoryDisplayName(cat, locale)}</span>
                       {cat.pinned && <Pin className="h-3 w-3 text-primary" />}
                     </div>
@@ -358,9 +359,12 @@ export default function CategoriesPage() {
                       const suffix = lim.budgetPeriod === "yearly" ? t.categories_limit_per_year : t.categories_limit_per_month;
                       return (
                         <span className="text-xs text-muted-foreground">
-                          {t.categories_limit_prefix} {formatCurrency(lim.budgetAmount, currency)}{suffix}
+                          {t.categories_limit_prefix}{" "}
+                          <span dir="ltr" className="tabular-nums inline-block">
+                            {formatCurrency(lim.budgetAmount, currency)}{suffix}
+                          </span>
                           {lim.budgetPeriod === "yearly" && (
-                            <span className="ml-1 opacity-70">({formatCurrency(lim.monthlyLimit, currency)}/mo)</span>
+                            <span className="ms-1 opacity-70" dir="ltr">({formatCurrency(lim.monthlyLimit, currency)}/mo)</span>
                           )}
                         </span>
                       );
@@ -411,36 +415,36 @@ export default function CategoriesPage() {
   };
 
   return (
-    <div className="space-y-5">
-      <h1 className="text-2xl font-bold">{t.nav_categories}</h1>
+    <div className="space-y-5" dir={isRtl ? "rtl" : "ltr"}>
+      <h1 className={cn("text-2xl font-bold", isRtl && "text-end")}>{t.nav_categories}</h1>
 
       {/* Net income summary */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm text-muted-foreground font-normal">{t.budget_summary_subtitle}</CardTitle>
+          <CardTitle className={cn("text-sm text-muted-foreground font-normal", isRtl && "text-end")}>{t.budget_summary_subtitle}</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <div className="grid grid-cols-3 gap-3">
-            <div className="flex flex-col gap-1">
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div className={cn("flex flex-col gap-1", isRtl && "items-end")}>
+              <span className={cn("flex items-center gap-1.5 text-xs text-muted-foreground", isRtl && "flex-row-reverse")}>
                 <TrendingUp className="h-3.5 w-3.5 text-green-500" />
                 {t.budget_summary_income}
               </span>
-              <span className="text-lg font-bold text-green-600">{formatCurrency(monthlyIncome, currency)}</span>
+              <span className="text-lg font-bold text-green-600 tabular-nums" dir="ltr">{formatCurrency(monthlyIncome, currency)}</span>
             </div>
-            <div className="flex flex-col gap-1">
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div className={cn("flex flex-col gap-1", isRtl && "items-end")}>
+              <span className={cn("flex items-center gap-1.5 text-xs text-muted-foreground", isRtl && "flex-row-reverse")}>
                 <TrendingDown className="h-3.5 w-3.5 text-red-500" />
                 {t.budget_summary_expenses}
               </span>
-              <span className="text-lg font-bold text-red-500">{formatCurrency(monthlyExpenses, currency)}</span>
+              <span className="text-lg font-bold text-red-500 tabular-nums" dir="ltr">{formatCurrency(monthlyExpenses, currency)}</span>
             </div>
-            <div className="flex flex-col gap-1">
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div className={cn("flex flex-col gap-1", isRtl && "items-end")}>
+              <span className={cn("flex items-center gap-1.5 text-xs text-muted-foreground", isRtl && "flex-row-reverse")}>
                 <Wallet className="h-3.5 w-3.5" />
                 {t.budget_summary_net}
               </span>
-              <span className={`text-lg font-bold ${monthlyNet >= 0 ? "text-green-600" : "text-red-500"}`}>
+              <span className={`text-lg font-bold tabular-nums ${monthlyNet >= 0 ? "text-green-600" : "text-red-500"}`} dir="ltr">
                 {formatCurrency(monthlyNet, currency)}
               </span>
             </div>
@@ -448,8 +452,8 @@ export default function CategoriesPage() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="expense">
-        <TabsList>
+      <Tabs defaultValue="expense" dir={isRtl ? "rtl" : "ltr"}>
+        <TabsList className={cn(isRtl && "w-full")}>
           <TabsTrigger value="expense">{t.categories_expenses_tab} ({expenseCategories.length})</TabsTrigger>
           <TabsTrigger value="income">{t.categories_income_tab} ({incomeCategories.length})</TabsTrigger>
           <TabsTrigger value="tags" onClick={() => { if (!tagStatsLoaded) loadTagStats(); }}>
@@ -459,23 +463,29 @@ export default function CategoriesPage() {
         </TabsList>
 
         <TabsContent value="expense" className="mt-4 space-y-3">
-          <Button size="sm" onClick={() => openNew("expense")} className="gap-2">
-            <Plus className="h-4 w-4" /> {t.categories_add_expense}
-          </Button>
+          <div className={cn("flex", isRtl && "justify-end")}>
+            <Button size="sm" onClick={() => openNew("expense")} className="gap-2">
+              <Plus className="h-4 w-4" /> {t.categories_add_expense}
+            </Button>
+          </div>
           <CategoryList cats={expenseCategories} type="expense" />
         </TabsContent>
 
         <TabsContent value="income" className="mt-4 space-y-3">
-          <Button size="sm" onClick={() => openNew("income")} className="gap-2">
-            <Plus className="h-4 w-4" /> {t.categories_add_income}
-          </Button>
+          <div className={cn("flex", isRtl && "justify-end")}>
+            <Button size="sm" onClick={() => openNew("income")} className="gap-2">
+              <Plus className="h-4 w-4" /> {t.categories_add_income}
+            </Button>
+          </div>
           <CategoryList cats={incomeCategories} type="income" />
         </TabsContent>
 
         <TabsContent value="tags" className="mt-4 space-y-3">
-          <Button size="sm" onClick={openNewTag} className="gap-2">
-            <Plus className="h-4 w-4" /> {t.tags_add}
-          </Button>
+          <div className={cn("flex", isRtl && "justify-end")}>
+            <Button size="sm" onClick={openNewTag} className="gap-2">
+              <Plus className="h-4 w-4" /> {t.tags_add}
+            </Button>
+          </div>
 
           {tags.length === 0 ? (
             <p className="text-center text-muted-foreground text-sm py-8">{t.tags_no_tags}</p>
@@ -484,12 +494,12 @@ export default function CategoriesPage() {
               {tags.map((tag) => {
                 const stats = tagStats[tag.id];
                 return (
-                  <div key={tag.id} className="flex items-center gap-3 px-4 py-3 rounded-lg border bg-card">
+                  <div key={tag.id} className={cn("flex items-center gap-3 px-4 py-3 rounded-lg border bg-card", isRtl && "flex-row-reverse")}>
                     <span
                       className="w-4 h-4 rounded-full flex-shrink-0"
                       style={{ backgroundColor: tag.color }}
                     />
-                    <div className="flex-1 min-w-0">
+                    <div className={cn("flex-1 min-w-0", isRtl && "text-end")}>
                       <span className="font-medium text-sm">{tag.name}</span>
                       {tagStatsLoaded && (
                         <p className="text-xs text-muted-foreground mt-0.5">

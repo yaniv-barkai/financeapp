@@ -55,6 +55,8 @@ export interface Translations {
   dashboard_no_category_transactions: string;
   dashboard_income_wrong_category: string;
   dashboard_income_missing_category: string;
+  dashboard_budget_over: string;
+  dashboard_budget_left: string;
 
   // Transactions page
   transactions_title: string;
@@ -395,6 +397,8 @@ const en: Translations = {
   dashboard_no_category_transactions: "No transactions in this category this month.",
   dashboard_income_wrong_category: "Assigned to expense category",
   dashboard_income_missing_category: "Missing category",
+  dashboard_budget_over: "over",
+  dashboard_budget_left: "left",
 
   transactions_title: "Transactions",
   transactions_search_placeholder: "Search…",
@@ -724,6 +728,8 @@ const he: Translations = {
   dashboard_no_category_transactions: "אין עסקאות בקטגוריה זו החודש.",
   dashboard_income_wrong_category: "משויך לקטגוריית הוצאה",
   dashboard_income_missing_category: "קטגוריה חסרה",
+  dashboard_budget_over: "חריגה",
+  dashboard_budget_left: "נותר",
 
   transactions_title: "עסקאות",
   transactions_search_placeholder: "חיפוש…",

@@ -80,7 +80,8 @@ function SortableCategoryRow({ id, isReordering, children }: SortableCategoryRow
 export default function DashboardPage() {
   const { user, loading } = useRequireAuth();
   const { activeBookId, categories, setCategories, tags, currency, activeMonth, txVersion, bumpTxVersion } = useAppStore();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const isRtl = locale === "he";
   const confirm = useConfirm();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -132,13 +133,15 @@ export default function DashboardPage() {
 
   const expenseByCategory = useMemo(() => {
     const map: Record<string, number> = {};
-    transactions.filter((tx) => tx.type === "expense").forEach((tx) => {
-      map[tx.categoryId] = (map[tx.categoryId] ?? 0) + tx.amount;
+    transactions.forEach((tx) => {
+      const delta = tx.type === "expense" ? tx.amount : -tx.amount;
+      map[tx.categoryId] = (map[tx.categoryId] ?? 0) + delta;
     });
-    return Object.entries(map).map(([catId, amount]) => {
-      const cat = categories.find((c) => c.id === catId);
-      return { name: cat?.name ?? catId, amount, color: cat?.color ?? "#6b7280", catId };
-    });
+    return Object.entries(map)
+      .map(([catId, amount]) => {
+        const cat = categories.find((c) => c.id === catId);
+        return { name: cat?.name ?? catId, amount: Math.max(0, amount), color: cat?.color ?? "#6b7280", catId };
+      });
   }, [transactions, categories]);
 
   const incomeByCategory = useMemo(() => {
@@ -245,7 +248,7 @@ export default function DashboardPage() {
   );
 
   const categoryTotal = useMemo(
-    () => categoryTransactions.reduce((s, tx) => s + tx.amount, 0),
+    () => categoryTransactions.reduce((s, tx) => s + (tx.type === "expense" ? tx.amount : -tx.amount), 0),
     [categoryTransactions]
   );
 
@@ -413,22 +416,22 @@ export default function DashboardPage() {
         <Card>
           <CardContent className="p-3 sm:p-6">
             <div className="flex items-center gap-1 sm:gap-2 text-muted-foreground text-xs sm:text-sm mb-1 truncate">
-              <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
-              <span className="truncate">{t.dashboard_income}</span>
+              <TrendingDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500 flex-shrink-0" />
+              <span className="truncate">{t.dashboard_expenses}</span>
             </div>
-            <p className="text-sm sm:text-xl lg:text-2xl font-bold text-green-600 tabular-nums break-all">
-              {formatCurrency(totalIncome, currency)}
+            <p className="text-sm sm:text-xl lg:text-2xl font-bold text-red-500 tabular-nums break-all">
+              {formatCurrency(totalExpenses, currency)}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3 sm:p-6">
             <div className="flex items-center gap-1 sm:gap-2 text-muted-foreground text-xs sm:text-sm mb-1 truncate">
-              <TrendingDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500 flex-shrink-0" />
-              <span className="truncate">{t.dashboard_expenses}</span>
+              <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
+              <span className="truncate">{t.dashboard_income}</span>
             </div>
-            <p className="text-sm sm:text-xl lg:text-2xl font-bold text-red-500 tabular-nums break-all">
-              {formatCurrency(totalExpenses, currency)}
+            <p className="text-sm sm:text-xl lg:text-2xl font-bold text-green-600 tabular-nums break-all">
+              {formatCurrency(totalIncome, currency)}
             </p>
           </CardContent>
         </Card>
@@ -449,101 +452,9 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Income by category */}
-      {incomeCategoryRows.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t.dashboard_income_by_category}</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y">
-              {incomeCategoryRows.map(({ catId, name, icon, color, earned, limit, hasLimit, pct }) => {
-                const cappedPct = pct !== null ? Math.min(pct, 100) : null;
-                const amountColor =
-                  earned === 0 ? "text-muted-foreground/50" :
-                  !hasLimit ? "text-green-600 font-semibold" :
-                  pct !== null && pct >= 100 ? "text-green-600 font-bold" :
-                  pct !== null && pct >= 80 ? "text-green-600 font-semibold" :
-                  "text-amber-600 font-semibold";
-                const barClass =
-                  pct !== null && pct >= 80 ? "[&>div]:bg-green-500" :
-                  pct !== null ? "[&>div]:bg-amber-400" : "";
-
-                return (
-                  <div
-                    key={catId}
-                    className={`px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors ${
-                      earned === 0 ? "opacity-50" : ""
-                    }`}
-                    onClick={() => setSelectedCategoryId(catId)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setSelectedCategoryId(catId);
-                      }
-                    }}
-                  >
-                    <div className="flex items-center justify-between gap-3 mb-1.5">
-                      <span className="flex items-center gap-2 min-w-0">
-                        <span className="text-base w-6 text-center flex-shrink-0" style={{ color }}>
-                          {icon ?? "📦"}
-                        </span>
-                        <span className="text-sm font-medium truncate">{name}</span>
-                      </span>
-                      <span className={`text-xs tabular-nums flex-shrink-0 ${amountColor}`} dir="ltr">
-                        {hasLimit
-                          ? `${formatCurrency(earned, currency)} / ${formatCurrency(limit!, currency)}`
-                          : formatCurrency(earned, currency)}
-                      </span>
-                    </div>
-                    {hasLimit && cappedPct !== null && (
-                      <Progress value={cappedPct} className={`h-1.5 ${barClass}`} />
-                    )}
-                  </div>
-                );
-              })}
-              {orphanIncomeRows.map(({ catId, name, icon, color, earned, subtitle }) => (
-                <div
-                  key={`orphan-${catId}`}
-                  className="px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors bg-amber-50/50 dark:bg-amber-950/20"
-                  onClick={() => setSelectedCategoryId(catId)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setSelectedCategoryId(catId);
-                    }
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="flex items-center gap-2 min-w-0">
-                      <span className="text-base w-6 text-center flex-shrink-0" style={{ color }}>
-                        {icon ?? "❓"}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="text-sm font-medium truncate block">{name}</span>
-                        {subtitle && (
-                          <span className="text-xs text-amber-600 dark:text-amber-400">{subtitle}</span>
-                        )}
-                      </span>
-                    </span>
-                    <span className="text-xs tabular-nums flex-shrink-0 text-green-600 font-semibold" dir="ltr">
-                      {formatCurrency(earned, currency)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Category spending — all expense categories */}
       {displayedCatRows.length > 0 && (
-        <Card>
+        <Card dir={isRtl ? "rtl" : "ltr"}>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
               <CardTitle className="text-base">{t.dashboard_monthly_limits}</CardTitle>
@@ -639,7 +550,16 @@ export default function DashboardPage() {
                             </span>
                           </div>
                           {hasLimit && cappedPct !== null && (
-                            <Progress value={cappedPct} className={`h-1.5 ${barClass}`} />
+                            <>
+                              <Progress value={cappedPct} className={`h-1.5 ${barClass}`} />
+                              {pct !== null && (
+                                <p className={`text-xs tabular-nums mt-1 ${pct > 100 ? "text-red-500" : "text-muted-foreground"}`} dir="ltr">
+                                  {pct > 100
+                                    ? `${formatCurrency(spent - limit!, currency)} ${t.dashboard_budget_over}`
+                                    : `${formatCurrency(limit! - spent, currency)} ${t.dashboard_budget_left}`}
+                                </p>
+                              )}
+                            </>
                           )}
                         </div>
                       </SortableCategoryRow>
@@ -649,6 +569,98 @@ export default function DashboardPage() {
               </CardContent>
             </SortableContext>
           </DndContext>
+        </Card>
+      )}
+
+      {/* Income by category */}
+      {incomeCategoryRows.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">{t.dashboard_income_by_category}</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y">
+              {incomeCategoryRows.map(({ catId, name, icon, color, earned, limit, hasLimit, pct }) => {
+                const cappedPct = pct !== null ? Math.min(pct, 100) : null;
+                const amountColor =
+                  earned === 0 ? "text-muted-foreground/50" :
+                  !hasLimit ? "text-green-600 font-semibold" :
+                  pct !== null && pct >= 100 ? "text-green-600 font-bold" :
+                  pct !== null && pct >= 80 ? "text-green-600 font-semibold" :
+                  "text-amber-600 font-semibold";
+                const barClass =
+                  pct !== null && pct >= 80 ? "[&>div]:bg-green-500" :
+                  pct !== null ? "[&>div]:bg-amber-400" : "";
+
+                return (
+                  <div
+                    key={catId}
+                    className={`px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors ${
+                      earned === 0 ? "opacity-50" : ""
+                    }`}
+                    onClick={() => setSelectedCategoryId(catId)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedCategoryId(catId);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-3 mb-1.5">
+                      <span className="flex items-center gap-2 min-w-0">
+                        <span className="text-base w-6 text-center flex-shrink-0" style={{ color }}>
+                          {icon ?? "📦"}
+                        </span>
+                        <span className="text-sm font-medium truncate">{name}</span>
+                      </span>
+                      <span className={`text-xs tabular-nums flex-shrink-0 ${amountColor}`} dir="ltr">
+                        {hasLimit
+                          ? `${formatCurrency(earned, currency)} / ${formatCurrency(limit!, currency)}`
+                          : formatCurrency(earned, currency)}
+                      </span>
+                    </div>
+                    {hasLimit && cappedPct !== null && (
+                      <Progress value={cappedPct} className={`h-1.5 ${barClass}`} />
+                    )}
+                  </div>
+                );
+              })}
+              {orphanIncomeRows.map(({ catId, name, icon, color, earned, subtitle }) => (
+                <div
+                  key={`orphan-${catId}`}
+                  className="px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors bg-amber-50/50 dark:bg-amber-950/20"
+                  onClick={() => setSelectedCategoryId(catId)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedCategoryId(catId);
+                    }
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span className="text-base w-6 text-center flex-shrink-0" style={{ color }}>
+                        {icon ?? "❓"}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="text-sm font-medium truncate block">{name}</span>
+                        {subtitle && (
+                          <span className="text-xs text-amber-600 dark:text-amber-400">{subtitle}</span>
+                        )}
+                      </span>
+                    </span>
+                    <span className="text-xs tabular-nums flex-shrink-0 text-green-600 font-semibold" dir="ltr">
+                      {formatCurrency(earned, currency)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
         </Card>
       )}
 
