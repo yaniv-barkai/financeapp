@@ -284,6 +284,44 @@ export interface Translations {
   // QuickAdd FAB
   fab_add_transaction: string;
 
+  // Statistics page
+  nav_statistics: string;
+  stats_title: string;
+  stats_date_from: string;
+  stats_date_to: string;
+  stats_preset: string;
+  stats_preset_this_month: string;
+  stats_preset_last_month: string;
+  stats_preset_last_3_months: string;
+  stats_preset_last_6_months: string;
+  stats_preset_this_year: string;
+  stats_preset_custom: string;
+  stats_group_by: string;
+  stats_group_none: string;
+  stats_group_category: string;
+  stats_group_tag: string;
+  stats_group_month: string;
+  stats_group_merchant: string;
+  stats_col_date: string;
+  stats_col_merchant: string;
+  stats_col_category: string;
+  stats_col_amount: string;
+  stats_col_type: string;
+  stats_col_tags: string;
+  stats_col_note: string;
+  stats_col_count: string;
+  stats_col_income: string;
+  stats_col_expenses: string;
+  stats_col_net: string;
+  stats_col_name: string;
+  stats_col_month: string;
+  stats_summary_income: string;
+  stats_summary_expenses: string;
+  stats_summary_net: string;
+  stats_summary_transactions: string;
+  stats_no_results: string;
+  stats_loading: string;
+
   // Tags management
   tags_tab: string;
   tags_title: string;
@@ -597,6 +635,43 @@ const en: Translations = {
   tags_picker_search: "Search or create tag…",
   tags_picker_no_results: "No tags found.",
   tags_picker_create: "Create",
+
+  nav_statistics: "Statistics",
+  stats_title: "Statistics",
+  stats_date_from: "From",
+  stats_date_to: "To",
+  stats_preset: "Preset",
+  stats_preset_this_month: "This month",
+  stats_preset_last_month: "Last month",
+  stats_preset_last_3_months: "Last 3 months",
+  stats_preset_last_6_months: "Last 6 months",
+  stats_preset_this_year: "This year",
+  stats_preset_custom: "Custom",
+  stats_group_by: "Group by",
+  stats_group_none: "No grouping",
+  stats_group_category: "Category",
+  stats_group_tag: "Tag",
+  stats_group_month: "Month",
+  stats_group_merchant: "Merchant",
+  stats_col_date: "Date",
+  stats_col_merchant: "Merchant",
+  stats_col_category: "Category",
+  stats_col_amount: "Amount",
+  stats_col_type: "Type",
+  stats_col_tags: "Tags",
+  stats_col_note: "Note",
+  stats_col_count: "Transactions",
+  stats_col_income: "Income",
+  stats_col_expenses: "Expenses",
+  stats_col_net: "Net",
+  stats_col_name: "Name",
+  stats_col_month: "Month",
+  stats_summary_income: "Total Income",
+  stats_summary_expenses: "Total Expenses",
+  stats_summary_net: "Net",
+  stats_summary_transactions: "Transactions",
+  stats_no_results: "No transactions found for the selected filters.",
+  stats_loading: "Loading…",
 };
 
 const he: Translations = {
@@ -889,6 +964,43 @@ const he: Translations = {
   tags_picker_search: "חפש או צור תגית…",
   tags_picker_no_results: "לא נמצאו תגיות.",
   tags_picker_create: "צור",
+
+  nav_statistics: "סטטיסטיקות",
+  stats_title: "סטטיסטיקות",
+  stats_date_from: "מתאריך",
+  stats_date_to: "עד תאריך",
+  stats_preset: "תקופה מוגדרת",
+  stats_preset_this_month: "החודש",
+  stats_preset_last_month: "חודש שעבר",
+  stats_preset_last_3_months: "3 חודשים אחרונים",
+  stats_preset_last_6_months: "6 חודשים אחרונים",
+  stats_preset_this_year: "השנה",
+  stats_preset_custom: "מותאם אישית",
+  stats_group_by: "קבץ לפי",
+  stats_group_none: "ללא קיבוץ",
+  stats_group_category: "קטגוריה",
+  stats_group_tag: "תגית",
+  stats_group_month: "חודש",
+  stats_group_merchant: "ספק",
+  stats_col_date: "תאריך",
+  stats_col_merchant: "ספק",
+  stats_col_category: "קטגוריה",
+  stats_col_amount: "סכום",
+  stats_col_type: "סוג",
+  stats_col_tags: "תגיות",
+  stats_col_note: "הערה",
+  stats_col_count: "עסקאות",
+  stats_col_income: "הכנסות",
+  stats_col_expenses: "הוצאות",
+  stats_col_net: "נטו",
+  stats_col_name: "שם",
+  stats_col_month: "חודש",
+  stats_summary_income: "סה״כ הכנסות",
+  stats_summary_expenses: "סה״כ הוצאות",
+  stats_summary_net: "נטו",
+  stats_summary_transactions: "עסקאות",
+  stats_no_results: "לא נמצאו עסקאות לפי הסינון שנבחר.",
+  stats_loading: "טוען…",
 };
 
 export const translations: Record<Locale, Translations> = { en, he };

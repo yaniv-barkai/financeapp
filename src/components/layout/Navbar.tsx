@@ -13,6 +13,7 @@ import {
   Search,
   LogOut,
   Wallet,
+  PieChart,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useLocale } from "@/components/providers/LocaleProvider";
@@ -28,6 +29,7 @@ export function Navbar() {
   const NAV_ITEMS = [
     { href: "/", label: t.nav_dashboard, icon: LayoutDashboard },
     { href: "/transactions", label: t.nav_transactions, icon: ListOrdered },
+    { href: "/statistics", label: t.nav_statistics, icon: PieChart },
     { href: "/import", label: t.nav_import_csv, icon: Upload },
     { href: "/categories", label: t.nav_categories, icon: BarChart3 },
     { href: "/recurring", label: t.nav_recurring, icon: RefreshCw },
