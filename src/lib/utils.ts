@@ -51,6 +51,11 @@ export function getMonthRange(monthKey: string): { start: Date; end: Date } {
   return { start, end };
 }
 
+export function getPrevMonthKey(monthKey: string): string {
+  const [year, month] = monthKey.split("-").map(Number);
+  return getMonthKey(new Date(year, month - 2, 1));
+}
+
 export function getCategoryDisplayName(
   cat: { name: string; nameEn?: string },
   locale: string

@@ -28,7 +28,7 @@ import { getTransactionsByMonth, deleteTransaction, addTransaction } from "@/lib
 import { getAllLimits, updateCategoryOrders } from "@/lib/firestore/categories";
 import { getRecurring, reconcileRecurring, updateRecurring, bookingDateForMonth, advanceNextRunPast, skipRecurringPeriod } from "@/lib/firestore/recurring";
 import { Transaction, Recurring } from "@/lib/types";
-import { formatCurrency, formatDate, getMonthRange } from "@/lib/utils";
+import { formatCurrency, formatDate, getMonthRange, getPrevMonthKey, getMonthKey } from "@/lib/utils";
 import { MonthSwitcher } from "@/components/dashboard/MonthSwitcher";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -90,24 +90,70 @@ export default function DashboardPage() {
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [dataLoading, setDataLoading] = useState(false);
   const [overrideAmounts, setOverrideAmounts] = useState<Record<string, number>>({});
+  const [prevMonthOverspend, setPrevMonthOverspend] = useState<Record<string, number>>({});
   const [isReordering, setIsReordering] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
   const { start, end } = getMonthRange(activeMonth);
+  const { end: prevEnd } = getMonthRange(getPrevMonthKey(activeMonth));
+  // Cumulative rollover starts from Feb 2026
+  const rolloverOrigin = new Date(2026, 1, 1); // Feb 1 2026
 
   const loadData = async () => {
     if (!user || !activeBookId) return;
     setDataLoading(true);
     try {
       await reconcileRecurring(user.uid, activeBookId);
-      const [txs, lims, recs] = await Promise.all([
+
+      // Only fetch rollover history if the current month is after the origin
+      const needsRollover = start > rolloverOrigin;
+
+      const [txs, lims, recs, historyTxs] = await Promise.all([
         getTransactionsByMonth(user.uid, activeBookId, start, end),
         getAllLimits(user.uid, activeBookId, categories),
         getRecurring(user.uid, activeBookId),
+        needsRollover
+          ? getTransactionsByMonth(user.uid, activeBookId, rolloverOrigin, prevEnd)
+          : Promise.resolve([]),
       ]);
       setTransactions(txs);
       setLimits(lims);
       setRecurrings(recs.filter((r) => r.active));
+
+      if (!needsRollover) {
+        setPrevMonthOverspend({});
+        return;
+      }
+
+      // Bucket history transactions by month key
+      const byMonth: Record<string, Record<string, number>> = {};
+      historyTxs.forEach((tx) => {
+        const mk = getMonthKey(tx.date.toDate());
+        if (!byMonth[mk]) byMonth[mk] = {};
+        const delta = tx.type === "expense" ? tx.amount : -tx.amount;
+        byMonth[mk][tx.categoryId] = (byMonth[mk][tx.categoryId] ?? 0) + delta;
+      });
+
+      // Walk every month from rolloverOrigin up to (and including) prev month,
+      // accumulating net = spent - limit for each category.
+      // Positive net = debt carried forward; negative = credit (clamps debt toward 0).
+      const overspend: Record<string, number> = {};
+      categories
+        .filter((c) => c.type === "expense")
+        .forEach((cat) => {
+          const lim = lims[cat.id];
+          if (!lim || lim <= 0) return;
+          let debt = 0;
+          const cursor = new Date(rolloverOrigin);
+          while (cursor <= prevEnd) {
+            const mk = getMonthKey(cursor);
+            const spent = Math.max(0, byMonth[mk]?.[cat.id] ?? 0);
+            debt += spent - lim;
+            cursor.setMonth(cursor.getMonth() + 1);
+          }
+          if (debt > 0) overspend[cat.id] = debt;
+        });
+      setPrevMonthOverspend(overspend);
     } finally {
       setDataLoading(false);
     }
@@ -164,10 +210,11 @@ export default function DashboardPage() {
         const spent = expenseByCategory.find((e) => e.catId === cat.id)?.amount ?? 0;
         const limit = limits[cat.id];
         const hasLimit = limit !== undefined && limit > 0;
+        const rollover = hasLimit ? (prevMonthOverspend[cat.id] ?? 0) : 0;
         const pct = hasLimit ? (spent / limit) * 100 : null;
-        return { catId: cat.id, name: cat.name, icon: cat.icon, color: cat.color, spent, limit, hasLimit, pct };
+        return { catId: cat.id, name: cat.name, icon: cat.icon, color: cat.color, spent, limit, rollover, hasLimit, pct };
       });
-  }, [categories, expenseByCategory, limits]);
+  }, [categories, expenseByCategory, limits, prevMonthOverspend]);
 
   // Rows sorted by budget usage (for normal view)
   const categoryBudgetRows = useMemo(() => {
@@ -499,7 +546,7 @@ export default function DashboardPage() {
             >
               <CardContent className="p-0">
                 <div className="divide-y">
-                  {displayedCatRows.map(({ catId, name, icon, color, spent, limit, hasLimit, pct }) => {
+                  {displayedCatRows.map(({ catId, name, icon, color, spent, limit, rollover, hasLimit, pct }) => {
                     const cappedPct = pct !== null ? Math.min(pct, 100) : null;
                     const amountColor =
                       spent === 0 ? "text-muted-foreground/50" :
@@ -511,6 +558,7 @@ export default function DashboardPage() {
                       pct !== null && pct > 100 ? "[&>div]:bg-red-500" :
                       pct !== null && pct >= 80 ? "[&>div]:bg-amber-400" :
                       pct !== null ? "[&>div]:bg-green-500" : "";
+                    const hasRollover = rollover > 0;
 
                     return (
                       <SortableCategoryRow key={catId} id={catId} isReordering={isReordering}>
@@ -552,13 +600,20 @@ export default function DashboardPage() {
                           {hasLimit && cappedPct !== null && (
                             <>
                               <Progress value={cappedPct} className={`h-1.5 ${barClass}`} />
-                              {pct !== null && (
-                                <p className={`text-xs tabular-nums mt-1 ${pct > 100 ? "text-red-500" : "text-muted-foreground"}`} dir="ltr">
-                                  {pct > 100
-                                    ? `${formatCurrency(spent - limit!, currency)} ${t.dashboard_budget_over}`
-                                    : `${formatCurrency(limit! - spent, currency)} ${t.dashboard_budget_left}`}
-                                </p>
-                              )}
+                              <div className="flex items-center justify-between mt-1 gap-2">
+                                {pct !== null && (
+                                  <p className={`text-xs tabular-nums ${pct > 100 ? "text-red-500" : "text-muted-foreground"}`} dir="ltr">
+                                    {pct > 100
+                                      ? `${formatCurrency(spent - limit!, currency)} ${t.dashboard_budget_over}`
+                                      : `${formatCurrency(limit! - spent, currency)} ${t.dashboard_budget_left}`}
+                                  </p>
+                                )}
+                                {hasRollover && (
+                                  <p className="text-xs tabular-nums text-orange-500" dir="ltr">
+                                    ↑ {formatCurrency(rollover, currency)} {t.dashboard_budget_rollover}
+                                  </p>
+                                )}
+                              </div>
                             </>
                           )}
                         </div>

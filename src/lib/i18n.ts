@@ -57,6 +57,7 @@ export interface Translations {
   dashboard_income_missing_category: string;
   dashboard_budget_over: string;
   dashboard_budget_left: string;
+  dashboard_budget_rollover: string;
 
   // Transactions page
   transactions_title: string;
@@ -399,6 +400,7 @@ const en: Translations = {
   dashboard_income_missing_category: "Missing category",
   dashboard_budget_over: "over",
   dashboard_budget_left: "left",
+  dashboard_budget_rollover: "carried from last month",
 
   transactions_title: "Transactions",
   transactions_search_placeholder: "Search…",
@@ -730,6 +732,7 @@ const he: Translations = {
   dashboard_income_missing_category: "קטגוריה חסרה",
   dashboard_budget_over: "חריגה",
   dashboard_budget_left: "נותר",
+  dashboard_budget_rollover: "הועבר מהחודש הקודם",
 
   transactions_title: "עסקאות",
   transactions_search_placeholder: "חיפוש…",
