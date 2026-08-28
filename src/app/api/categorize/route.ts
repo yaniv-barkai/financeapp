@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { NextRequest } from "next/server";
+import { verifyIdToken } from "@/lib/firebase-admin";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -31,6 +32,18 @@ Rules:
 6. Return ONLY a valid JSON object: { "merchant string exactly as given": "categoryId", ... }. No markdown, no explanation.`;
 
 export async function POST(req: NextRequest) {
+  const authHeader = req.headers.get("authorization");
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!token) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    await verifyIdToken(token);
+  } catch {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { merchants, categories } = (await req.json()) as CategorizeRequest;
 
   if (!merchants.length || !categories.length) {
@@ -52,7 +65,7 @@ export async function POST(req: NextRequest) {
   const userMessage = `CATEGORIES:\n${categoryList}\n\nMERCHANTS TO CATEGORISE:\n${merchantList}`;
 
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: process.env.OPENAI_CATEGORIZE_MODEL ?? "gpt-4o-mini",
     messages: [
       { role: "system", content: SYSTEM },
       { role: "user", content: userMessage },

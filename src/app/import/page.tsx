@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { getIdToken } from "@/lib/auth-token";
 import { useMemo } from "react";
 
 type Step = "upload" | "map" | "review" | "done";
@@ -181,9 +182,15 @@ export default function ImportPage() {
       const uncategorized = rows.filter((r) => !r.skip);
       const uniqueMerchants = [...new Set(uncategorized.map((r) => r.merchantDisplay).filter(Boolean))];
 
+      const idToken = await getIdToken();
+      if (!idToken) return;
+
       const res = await fetch("/api/categorize", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
         body: JSON.stringify({
           merchants: uniqueMerchants,
           categories: categories.map((c) => ({
