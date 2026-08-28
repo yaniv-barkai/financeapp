@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowRightLeft } from "lucide-react";
 import { Timestamp } from "firebase/firestore";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -12,9 +12,12 @@ import {
   addRecurring,
   updateRecurring,
   deleteRecurring,
+  bookingDateForMonth,
+  advanceNextRunPast,
 } from "@/lib/firestore/recurring";
+import { addTransaction } from "@/lib/firestore/transactions";
 import { Recurring } from "@/lib/types";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, getMonthRange } from "@/lib/utils";
 import { CategoryPicker } from "@/components/transactions/CategoryPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +42,7 @@ import {
 } from "@/components/ui/select";
 import { addMonths, addWeeks, addYears } from "date-fns";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
+import { toast } from "sonner";
 
 function nextRunDate(cadence: Recurring["cadence"]): Date {
   const now = new Date();
@@ -63,7 +67,7 @@ const BLANK: Omit<Recurring, "id" | "createdAt"> = {
 export default function RecurringPage() {
   const { loading } = useRequireAuth();
   const { user } = useAuth();
-  const { activeBookId, categories, currency } = useAppStore();
+  const { activeBookId, categories, currency, activeMonth, bumpTxVersion } = useAppStore();
   const { t } = useLocale();
 
   const confirm = useConfirm();
@@ -72,6 +76,7 @@ export default function RecurringPage() {
   const [editItem, setEditItem] = useState<Recurring | null>(null);
   const [form, setForm] = useState(BLANK);
   const [saving, setSaving] = useState(false);
+  const [bookingId, setBookingId] = useState<string | null>(null);
 
   const loadData = async () => {
     if (!user || !activeBookId) return;
@@ -143,6 +148,36 @@ export default function RecurringPage() {
     loadData();
   };
 
+  const handleAddToTransaction = async (r: Recurring) => {
+    if (!user || !activeBookId) return;
+    setBookingId(r.id);
+    try {
+      const { start, end } = getMonthRange(activeMonth);
+      const bookDate = bookingDateForMonth(start, end);
+      await addTransaction(user.uid, activeBookId, {
+        type: r.type,
+        amount: r.amount,
+        categoryId: r.categoryId,
+        ...(r.merchantDisplay && { merchantDisplay: r.merchantDisplay }),
+        date: Timestamp.fromDate(bookDate),
+        ...(r.note && { note: r.note }),
+        tags: [],
+        recurringId: r.id,
+      });
+      const nextRun = advanceNextRunPast(r.nextRunDate.toDate(), r.cadence, end);
+      await updateRecurring(user.uid, activeBookId, r.id, {
+        nextRunDate: Timestamp.fromDate(nextRun),
+      });
+      bumpTxVersion();
+      await loadData();
+      toast.success(t.recurring_added_to_transaction);
+    } catch {
+      toast.error(t.recurring_add_to_transaction_error);
+    } finally {
+      setBookingId(null);
+    }
+  };
+
   const cadenceLabel = (c: Recurring["cadence"]) => {
     if (c === "weekly") return t.recurring_weekly;
     if (c === "monthly") return t.recurring_monthly;
@@ -192,6 +227,17 @@ export default function RecurringPage() {
                 <span className={`font-semibold text-sm flex-shrink-0 ${r.type === "income" ? "text-green-600" : "text-red-500"}`}>
                   {formatCurrency(r.amount, currency)}
                 </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 flex-shrink-0"
+                  disabled={!r.active || bookingId === r.id}
+                  onClick={() => handleAddToTransaction(r)}
+                  title={t.recurring_add_to_transaction}
+                >
+                  <ArrowRightLeft className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{t.recurring_add_to_transaction}</span>
+                </Button>
                 <Switch
                   checked={r.active}
                   onCheckedChange={() => handleToggleActive(r)}

@@ -11,10 +11,12 @@ import {
   getTransactionsByMonth,
   deleteTransaction,
   transferTransaction,
+  updateTransaction,
 } from "@/lib/firestore/transactions";
+import { upsertMerchant } from "@/lib/firestore/merchants";
 import { addRecurring, skipRecurringPeriod } from "@/lib/firestore/recurring";
 import { Transaction, RecurringCadence } from "@/lib/types";
-import { formatCurrency, formatDate, getMonthRange } from "@/lib/utils";
+import { formatCurrency, formatDate, getMonthRange, getCategoryDisplayName } from "@/lib/utils";
 import { MonthSwitcher } from "@/components/dashboard/MonthSwitcher";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { CategoryPicker } from "@/components/transactions/CategoryPicker";
@@ -44,10 +46,76 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
 
+/** Icon + label that open one shared category picker (good tap targets on mobile). */
+function TransactionCategoryControls({
+  tx,
+  catIcon,
+  catLabel,
+  onChange,
+  tagsSlot,
+  note,
+}: {
+  tx: Transaction;
+  catIcon: string;
+  catLabel: string;
+  onChange: (categoryId: string) => void;
+  tagsSlot?: React.ReactNode;
+  note?: string;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="text-xl w-10 h-10 flex-shrink-0 inline-flex items-center justify-center rounded-md hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label={catLabel}
+      >
+        {catIcon}
+      </button>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">
+          {tx.merchantDisplay || catLabel}
+        </p>
+        <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="rounded px-1 py-0.5 -mx-1 min-h-[28px] inline-flex items-center hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {catLabel}
+          </button>
+          <span>·</span>
+          <span>{formatDate(tx.date.toDate())}</span>
+          {tx.recurringId && (
+            <span className="inline-flex items-center gap-0.5 ms-0.5">
+              · <RefreshCw className="h-3 w-3 inline" />
+            </span>
+          )}
+        </p>
+        {tagsSlot}
+        {note && <p className="text-xs text-muted-foreground italic truncate">{note}</p>}
+      </div>
+      <CategoryPicker
+        value={tx.categoryId}
+        onChange={(id) => {
+          onChange(id);
+          setOpen(false);
+        }}
+        typeFilter={tx.type}
+        open={open}
+        onOpenChange={setOpen}
+        hideTrigger
+      />
+    </>
+  );
+}
+
 export default function TransactionsPage() {
   const { user, loading } = useRequireAuth();
-  const { activeBookId, categories, tags, currency, activeMonth, books, txVersion, bumpTxVersion } = useAppStore();
-  const { t } = useLocale();
+  const { activeBookId, categories, tags, currency, activeMonth, books, txVersion, bumpTxVersion, setMerchants } = useAppStore();
+  const { t, locale } = useLocale();
 
   const confirm = useConfirm();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -119,6 +187,21 @@ export default function TransactionsPage() {
     }
     bumpTxVersion();
     loadData();
+  };
+
+  const handleCategoryChange = async (tx: Transaction, categoryId: string) => {
+    if (!user || !activeBookId || categoryId === tx.categoryId) return;
+    setTransactions((prev) =>
+      prev.map((t) => (t.id === tx.id ? { ...t, categoryId } : t))
+    );
+    await updateTransaction(user.uid, activeBookId, tx.id, { categoryId });
+    if (tx.merchantDisplay) {
+      await upsertMerchant(user.uid, activeBookId, tx.merchantDisplay, categoryId);
+      const { getMerchants } = await import("@/lib/firestore/merchants");
+      const updated = await getMerchants(user.uid, activeBookId);
+      setMerchants(updated);
+    }
+    bumpTxVersion();
   };
 
   const handleTransfer = async () => {
@@ -232,37 +315,32 @@ export default function TransactionsPage() {
             const txTags = (tx.tags ?? [])
               .map((id) => tags.find((tg) => tg.id === id))
               .filter(Boolean) as typeof tags;
+            const catLabel = cat ? getCategoryDisplayName(cat, locale) : "—";
             return (
               <div key={tx.id} className="flex items-center gap-3 px-4 py-3">
-                <span className="text-xl w-8 text-center flex-shrink-0">{cat?.icon ?? "📦"}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {tx.merchantDisplay || cat?.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {cat?.name} · {formatDate(tx.date.toDate())}
-                    {tx.recurringId && (
-                      <span className="inline-flex items-center gap-0.5 ms-1">
-                        · <RefreshCw className="h-3 w-3 inline" />
-                      </span>
-                    )}
-                  </p>
-                  {txTags.length > 0 && (
-                    <div className="flex gap-1 mt-1 flex-wrap">
-                      {txTags.map((tag) => (
-                        <Badge
-                          key={tag.id}
-                          variant="outline"
-                          className="text-xs py-0 h-5 gap-1"
-                          style={{ borderColor: tag.color + "55", color: tag.color, backgroundColor: tag.color + "11" }}
-                        >
-                          {tag.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  {tx.note && <p className="text-xs text-muted-foreground italic truncate">{tx.note}</p>}
-                </div>
+                <TransactionCategoryControls
+                  tx={tx}
+                  catIcon={cat?.icon ?? "📦"}
+                  catLabel={catLabel}
+                  onChange={(id) => handleCategoryChange(tx, id)}
+                  note={tx.note}
+                  tagsSlot={
+                    txTags.length > 0 ? (
+                      <div className="flex gap-1 mt-1 flex-wrap">
+                        {txTags.map((tag) => (
+                          <Badge
+                            key={tag.id}
+                            variant="outline"
+                            className="text-xs py-0 h-5 gap-1"
+                            style={{ borderColor: tag.color + "55", color: tag.color, backgroundColor: tag.color + "11" }}
+                          >
+                            {tag.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : undefined
+                  }
+                />
                 <span className={`font-semibold text-sm flex-shrink-0 ${tx.type === "income" ? "text-green-600" : "text-red-500"}`}>
                   {tx.type === "income" ? "+" : "-"}{formatCurrency(tx.amount, currency)}
                 </span>

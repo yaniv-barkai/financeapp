@@ -32,9 +32,10 @@ import {
   getCategories,
   updateCategoryOrders,
 } from "@/lib/firestore/categories";
+import { getRecurring, toMonthlyRecurringAmount } from "@/lib/firestore/recurring";
 import { addTag, updateTag, deleteTag, getTags } from "@/lib/firestore/tags";
 import { getTransactionsByMonth } from "@/lib/firestore/transactions";
-import { BudgetPeriod, Category, CategoryLimit } from "@/lib/types";
+import { BudgetPeriod, Category, CategoryLimit, Recurring } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -99,6 +100,7 @@ export default function CategoriesPage() {
 
   const confirm = useConfirm();
   const [limits, setLimits] = useState<Record<string, CategoryLimit>>({});
+  const [recurrings, setRecurrings] = useState<Recurring[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editCat, setEditCat] = useState<Category | null>(null);
   const [form, setForm] = useState<CategoryFormData>({ name: "", nameEn: "", icon: "📦", color: CAT_COLORS[0] });
@@ -138,8 +140,12 @@ export default function CategoriesPage() {
 
   const loadLimits = async () => {
     if (!user || !activeBookId) return;
-    const lims = await getAllLimitDetails(user.uid, activeBookId, categories);
+    const [lims, recs] = await Promise.all([
+      getAllLimitDetails(user.uid, activeBookId, categories),
+      getRecurring(user.uid, activeBookId),
+    ]);
     setLimits(lims);
+    setRecurrings(recs.filter((r) => r.active));
   };
 
   const loadTagStats = async () => {
@@ -164,16 +170,18 @@ export default function CategoriesPage() {
   }, [user, activeBookId, categories.length]);
 
   const monthlyIncome = useMemo(
-    () => categories
-      .filter((c) => c.type === "income" && limits[c.id])
-      .reduce((s, c) => s + limits[c.id].monthlyLimit, 0),
-    [categories, limits]
+    () =>
+      recurrings
+        .filter((r) => r.type === "income")
+        .reduce((s, r) => s + toMonthlyRecurringAmount(r.amount, r.cadence), 0),
+    [recurrings]
   );
   const monthlyExpenses = useMemo(
-    () => categories
-      .filter((c) => c.type === "expense" && limits[c.id])
-      .reduce((s, c) => s + limits[c.id].monthlyLimit, 0),
-    [categories, limits]
+    () =>
+      recurrings
+        .filter((r) => r.type === "expense")
+        .reduce((s, r) => s + toMonthlyRecurringAmount(r.amount, r.cadence), 0),
+    [recurrings]
   );
   const monthlyNet = monthlyIncome - monthlyExpenses;
 

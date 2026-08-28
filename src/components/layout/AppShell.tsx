@@ -9,7 +9,12 @@ import { cn } from "@/lib/utils";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const isLogin = pathname === "/login";
   const isImport = pathname === "/import";
+
+  if (isLogin) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen">

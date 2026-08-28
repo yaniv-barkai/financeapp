@@ -5,19 +5,16 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  query,
-  where,
   serverTimestamp,
   Timestamp,
-  writeBatch,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { Recurring } from "../types";
+import { assertOwner } from "./auth";
 import {
   addDays,
   addMonths,
   addYears,
-  endOfDay,
   getISOWeek,
   getMonth,
   getYear,
@@ -26,6 +23,7 @@ import {
 } from "date-fns";
 
 function recurringRef(uid: string, bookId: string) {
+  assertOwner(uid);
   return collection(db, "users", uid, "books", bookId, "recurring");
 }
 
@@ -55,6 +53,7 @@ export async function updateRecurring(
   rid: string,
   data: Partial<Omit<Recurring, "id" | "createdAt">>
 ): Promise<void> {
+  assertOwner(uid);
   await updateDoc(
     doc(db, "users", uid, "books", bookId, "recurring", rid),
     data
@@ -66,6 +65,7 @@ export async function deleteRecurring(
   bookId: string,
   rid: string
 ): Promise<void> {
+  assertOwner(uid);
   await deleteDoc(doc(db, "users", uid, "books", bookId, "recurring", rid));
 }
 
@@ -80,6 +80,21 @@ export function recurringNextDate(
       return addMonths(current, 1);
     case "yearly":
       return addYears(current, 1);
+  }
+}
+
+/** Normalize a recurring amount to a monthly equivalent for budget math. */
+export function toMonthlyRecurringAmount(
+  amount: number,
+  cadence: Recurring["cadence"]
+): number {
+  switch (cadence) {
+    case "weekly":
+      return (amount * 52) / 12;
+    case "monthly":
+      return amount;
+    case "yearly":
+      return amount / 12;
   }
 }
 
@@ -106,7 +121,7 @@ export function bookingDateForMonth(monthStart: Date, monthEnd: Date): Date {
   return monthStart;
 }
 
-/** Advance nextRunDate past a boundary so reconcile won't re-book that period. */
+/** Advance nextRunDate past a boundary so the same period isn't re-booked. */
 export function advanceNextRunPast(
   nextRun: Date,
   cadence: Recurring["cadence"],
@@ -132,88 +147,4 @@ export async function skipRecurringPeriod(
   await updateRecurring(uid, bookId, recurringId, {
     nextRunDate: Timestamp.fromDate(nextRun),
   });
-}
-
-export async function reconcileRecurring(
-  uid: string,
-  bookId: string
-): Promise<number> {
-  const recurrings = await getRecurring(uid, bookId);
-  const today = startOfDay(new Date());
-  const due = recurrings.filter(
-    (r) => r.active && isBefore(r.nextRunDate.toDate(), today)
-  );
-  if (due.length === 0) return 0;
-
-  const txRef = collection(db, "users", uid, "books", bookId, "transactions");
-  const cadenceById = new Map(recurrings.map((r) => [r.id, r.cadence]));
-  const earliestDue = due.reduce(
-    (min, r) => {
-      const d = r.nextRunDate.toDate();
-      return d < min ? d : min;
-    },
-    due[0].nextRunDate.toDate()
-  );
-
-  const existingSnap = await getDocs(
-    query(
-      txRef,
-      where("date", ">=", Timestamp.fromDate(startOfDay(earliestDue))),
-      where("date", "<=", Timestamp.fromDate(endOfDay(today)))
-    )
-  );
-  const bookedPeriods = new Set<string>();
-  for (const d of existingSnap.docs) {
-    const data = d.data();
-    const recurringId = data.recurringId as string | undefined;
-    if (!recurringId) continue;
-    const cadence = cadenceById.get(recurringId);
-    if (!cadence) continue;
-    bookedPeriods.add(
-      recurringPeriodKey(recurringId, (data.date as Timestamp).toDate(), cadence)
-    );
-  }
-
-  const batch = writeBatch(db);
-  let count = 0;
-
-  for (const r of due) {
-    let runDate = r.nextRunDate.toDate();
-    while (isBefore(runDate, today)) {
-      const periodKey = recurringPeriodKey(r.id, runDate, r.cadence);
-      if (!bookedPeriods.has(periodKey)) {
-        const newTx = doc(txRef);
-        batch.set(newTx, {
-          type: r.type,
-          amount: r.amount,
-          categoryId: r.categoryId,
-          merchantDisplay: r.merchantDisplay ?? null,
-          merchantNormalized: null,
-          date: Timestamp.fromDate(runDate),
-          note: r.note ?? null,
-          tags: [],
-          recurringId: r.id,
-          createdAt: serverTimestamp(),
-        });
-        bookedPeriods.add(periodKey);
-        count++;
-      }
-      runDate = recurringNextDate(runDate, r.cadence);
-    }
-    const rDocRef = doc(
-      db,
-      "users",
-      uid,
-      "books",
-      bookId,
-      "recurring",
-      r.id
-    );
-    batch.update(rDocRef, {
-      nextRunDate: Timestamp.fromDate(runDate),
-    });
-  }
-
-  await batch.commit();
-  return count;
 }

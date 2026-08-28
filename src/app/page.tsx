@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import {
-  TrendingUp, TrendingDown, Wallet, Edit, Trash2, RefreshCw, GripVertical,
+  TrendingUp, TrendingDown, Wallet, Edit, Trash2, GripVertical,
 } from "lucide-react";
-import { Timestamp } from "firebase/firestore";
+import { computeExpenseByCategory } from "@/lib/budget";
 import {
   DndContext,
   closestCenter,
@@ -24,21 +24,18 @@ import { CSS } from "@dnd-kit/utilities";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useAppStore } from "@/lib/store";
 import { useLocale } from "@/components/providers/LocaleProvider";
-import { getTransactionsByMonth, deleteTransaction, addTransaction } from "@/lib/firestore/transactions";
+import { getTransactionsByMonth, deleteTransaction } from "@/lib/firestore/transactions";
 import { getAllLimits, updateCategoryOrders } from "@/lib/firestore/categories";
-import { getRecurring, reconcileRecurring, updateRecurring, bookingDateForMonth, advanceNextRunPast, skipRecurringPeriod } from "@/lib/firestore/recurring";
-import { Transaction, Recurring } from "@/lib/types";
+import { skipRecurringPeriod } from "@/lib/firestore/recurring";
+import { Transaction } from "@/lib/types";
 import { formatCurrency, formatDate, getMonthRange, getPrevMonthKey, getMonthKey } from "@/lib/utils";
 import { MonthSwitcher } from "@/components/dashboard/MonthSwitcher";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 
 // ─── Sortable category row ────────────────────────────────────────────────────
 
@@ -86,10 +83,8 @@ export default function DashboardPage() {
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [limits, setLimits] = useState<Record<string, number>>({});
-  const [recurrings, setRecurrings] = useState<Recurring[]>([]);
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [dataLoading, setDataLoading] = useState(false);
-  const [overrideAmounts, setOverrideAmounts] = useState<Record<string, number>>({});
   const [prevMonthOverspend, setPrevMonthOverspend] = useState<Record<string, number>>({});
   const [isReordering, setIsReordering] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -103,22 +98,18 @@ export default function DashboardPage() {
     if (!user || !activeBookId) return;
     setDataLoading(true);
     try {
-      await reconcileRecurring(user.uid, activeBookId);
-
       // Only fetch rollover history if the current month is after the origin
       const needsRollover = start > rolloverOrigin;
 
-      const [txs, lims, recs, historyTxs] = await Promise.all([
+      const [txs, lims, historyTxs] = await Promise.all([
         getTransactionsByMonth(user.uid, activeBookId, start, end),
         getAllLimits(user.uid, activeBookId, categories),
-        getRecurring(user.uid, activeBookId),
         needsRollover
           ? getTransactionsByMonth(user.uid, activeBookId, rolloverOrigin, prevEnd)
           : Promise.resolve([]),
       ]);
       setTransactions(txs);
       setLimits(lims);
-      setRecurrings(recs.filter((r) => r.active));
 
       if (!needsRollover) {
         setPrevMonthOverspend({});
@@ -163,11 +154,6 @@ export default function DashboardPage() {
     loadData();
   }, [user, activeBookId, activeMonth, categories.length, txVersion]);
 
-  const bookedRecurringIds = useMemo(
-    () => new Set(transactions.filter((tx) => tx.recurringId).map((tx) => tx.recurringId!)),
-    [transactions]
-  );
-
   const totalIncome = useMemo(
     () => transactions.filter((tx) => tx.type === "income").reduce((s, tx) => s + tx.amount, 0),
     [transactions]
@@ -178,16 +164,11 @@ export default function DashboardPage() {
   );
 
   const expenseByCategory = useMemo(() => {
-    const map: Record<string, number> = {};
-    transactions.forEach((tx) => {
-      const delta = tx.type === "expense" ? tx.amount : -tx.amount;
-      map[tx.categoryId] = (map[tx.categoryId] ?? 0) + delta;
+    const map = computeExpenseByCategory(transactions);
+    return Object.entries(map).map(([catId, amount]) => {
+      const cat = categories.find((c) => c.id === catId);
+      return { name: cat?.name ?? catId, amount, color: cat?.color ?? "#6b7280", catId };
     });
-    return Object.entries(map)
-      .map(([catId, amount]) => {
-        const cat = categories.find((c) => c.id === catId);
-        return { name: cat?.name ?? catId, amount: Math.max(0, amount), color: cat?.color ?? "#6b7280", catId };
-      });
   }, [transactions, categories]);
 
   const incomeByCategory = useMemo(() => {
@@ -340,113 +321,6 @@ export default function DashboardPage() {
     }
     bumpTxVersion();
     loadData();
-  };
-
-  const handleRecurringCheck = async (r: Recurring, checked: boolean) => {
-    if (!user || !activeBookId) return;
-    if (checked) {
-      const amount = overrideAmounts[r.id] ?? r.amount;
-      const bookDate = bookingDateForMonth(start, end);
-      await addTransaction(user.uid, activeBookId, {
-        type: r.type,
-        amount,
-        categoryId: r.categoryId,
-        ...(r.merchantDisplay && { merchantDisplay: r.merchantDisplay }),
-        date: Timestamp.fromDate(bookDate),
-        ...(r.note && { note: r.note }),
-        tags: [],
-        recurringId: r.id,
-      });
-      const nextRun = advanceNextRunPast(r.nextRunDate.toDate(), r.cadence, end);
-      await updateRecurring(user.uid, activeBookId, r.id, {
-        nextRunDate: Timestamp.fromDate(nextRun),
-      });
-      bumpTxVersion();
-      loadData();
-    } else {
-      const monthTxs = transactions.filter((tx) => tx.recurringId === r.id);
-      if (monthTxs.length === 0) return;
-      const uncheck = await confirm({
-        title: "Remove booking?",
-        message: t.dashboard_recurring_uncheck_confirm,
-        confirmLabel: "Remove",
-        cancelLabel: "Cancel",
-      });
-      if (!uncheck) return;
-      await Promise.all(
-        monthTxs.map((tx) => deleteTransaction(user.uid, activeBookId, tx.id))
-      );
-      const nextRun = advanceNextRunPast(r.nextRunDate.toDate(), r.cadence, end);
-      await updateRecurring(user.uid, activeBookId, r.id, {
-        nextRunDate: Timestamp.fromDate(nextRun),
-      });
-      bumpTxVersion();
-      loadData();
-    }
-  };
-
-  const cadenceLabel = (cadence: Recurring["cadence"]) => {
-    if (cadence === "weekly") return t.recurring_weekly;
-    if (cadence === "monthly") return t.recurring_monthly;
-    return t.recurring_yearly;
-  };
-
-  const incomeRecurrings = useMemo(
-    () => recurrings.filter((r) => r.type === "income"),
-    [recurrings]
-  );
-  const expenseRecurrings = useMemo(
-    () => recurrings.filter((r) => r.type === "expense"),
-    [recurrings]
-  );
-
-  const renderRecurringRow = (r: Recurring) => {
-    const cat = categories.find((c) => c.id === r.categoryId);
-    const isBooked = bookedRecurringIds.has(r.id);
-    const bookedTx = transactions.find((tx) => tx.recurringId === r.id);
-    const sign = r.type === "income" ? "+" : "−";
-    const amountColor = r.type === "income" ? "text-green-600" : "text-red-500";
-    return (
-      <div
-        key={r.id}
-        className={`flex items-center gap-3 px-4 py-2.5 ${isBooked ? "opacity-60" : ""}`}
-      >
-        <Checkbox
-          checked={isBooked}
-          onCheckedChange={(checked) => handleRecurringCheck(r, !!checked)}
-          className="flex-shrink-0"
-        />
-        <span className="text-lg w-7 text-center flex-shrink-0">{cat?.icon ?? "🔄"}</span>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{r.merchantDisplay || cat?.name}</p>
-          <Badge variant="outline" className="text-xs py-0 mt-0.5">
-            {cadenceLabel(r.cadence)}
-          </Badge>
-        </div>
-        {isBooked ? (
-          <span className={`font-semibold text-sm flex-shrink-0 ${amountColor}`}>
-            {sign}{formatCurrency(bookedTx?.amount ?? r.amount, currency)}
-          </span>
-        ) : (
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <span className={`text-sm font-semibold ${amountColor}`}>{sign}</span>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={overrideAmounts[r.id] ?? r.amount}
-              onChange={(e) =>
-                setOverrideAmounts((prev) => ({
-                  ...prev,
-                  [r.id]: parseFloat(e.target.value) || 0,
-                }))
-              }
-              className="w-24 h-7 text-sm text-right px-2"
-            />
-          </div>
-        )}
-      </div>
-    );
   };
 
   if (loading) return <DashboardSkeleton />;
@@ -715,36 +589,6 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Recurring items */}
-      {recurrings.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <RefreshCw className="h-4 w-4 text-muted-foreground" />
-              {t.recurring_title}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {expenseRecurrings.length > 0 && (
-              <div className="divide-y">
-                <p className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  {t.recurring_expense}
-                </p>
-                {expenseRecurrings.map(renderRecurringRow)}
-              </div>
-            )}
-            {incomeRecurrings.length > 0 && (
-              <div className={`divide-y ${expenseRecurrings.length > 0 ? "border-t" : ""}`}>
-                <p className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  {t.recurring_income}
-                </p>
-                {incomeRecurrings.map(renderRecurringRow)}
-              </div>
-            )}
           </CardContent>
         </Card>
       )}

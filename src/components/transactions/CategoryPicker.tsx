@@ -34,15 +34,37 @@ interface Props {
   onChange: (categoryId: string) => void;
   typeFilter?: TransactionType;
   placeholder?: string;
+  /** Custom trigger content. Replaces the default outline combobox button. */
+  trigger?: React.ReactNode;
+  /** When true, no trigger is rendered — use controlled `open` / `onOpenChange`. */
+  hideTrigger?: boolean;
+  className?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const CAT_COLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#f97316", "#6b7280"];
 
-export function CategoryPicker({ value, onChange, typeFilter, placeholder }: Props) {
+export function CategoryPicker({
+  value,
+  onChange,
+  typeFilter,
+  placeholder,
+  trigger,
+  hideTrigger,
+  className,
+  open: openControlled,
+  onOpenChange,
+}: Props) {
   const { user } = useAuth();
   const { categories, activeBookId, setCategories } = useAppStore();
   const { t, locale } = useLocale();
-  const [open, setOpen] = useState(false);
+  const [openUncontrolled, setOpenUncontrolled] = useState(false);
+  const open = openControlled ?? openUncontrolled;
+  const setOpen = (next: boolean) => {
+    onOpenChange?.(next);
+    if (openControlled === undefined) setOpenUncontrolled(next);
+  };
   const [showNew, setShowNew] = useState(false);
   const [newName, setNewName] = useState("");
   const [newNameEn, setNewNameEn] = useState("");
@@ -111,24 +133,43 @@ export function CategoryPicker({ value, onChange, typeFilter, placeholder }: Pro
 
   return (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        role="combobox"
-        aria-expanded={open}
-        className="w-full justify-between font-normal"
-        onClick={() => setOpen(true)}
-      >
-        {selected ? (
-          <span className="flex items-center gap-2">
-            <span>{selected.icon}</span>
-            <span>{getCategoryDisplayName(selected, locale)}</span>
-          </span>
+      {!hideTrigger && (
+        trigger ? (
+          <button
+            type="button"
+            role="combobox"
+            aria-expanded={open}
+            aria-label={selected ? getCategoryDisplayName(selected, locale) : effectivePlaceholder}
+            className={cn(
+              "inline-flex items-center justify-center rounded-md text-left font-normal transition-colors",
+              "hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              className
+            )}
+            onClick={() => setOpen(true)}
+          >
+            {trigger}
+          </button>
         ) : (
-          <span className="text-muted-foreground">{effectivePlaceholder}</span>
-        )}
-        <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
-      </Button>
+          <Button
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className={cn("w-full justify-between font-normal", className)}
+            onClick={() => setOpen(true)}
+          >
+            {selected ? (
+              <span className="flex items-center gap-2">
+                <span>{selected.icon}</span>
+                <span>{getCategoryDisplayName(selected, locale)}</span>
+              </span>
+            ) : (
+              <span className="text-muted-foreground">{effectivePlaceholder}</span>
+            )}
+            <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        )
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="p-0 gap-0 sm:max-w-sm overflow-hidden">
