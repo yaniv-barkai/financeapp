@@ -15,8 +15,10 @@ import {
 import { db } from "../firebase";
 import { Transaction, TransactionType } from "../types";
 import { normalizemerchant } from "../utils";
+import { assertOwner } from "./auth";
 
 function txRef(uid: string, bookId: string) {
+  assertOwner(uid);
   return collection(db, "users", uid, "books", bookId, "transactions");
 }
 
@@ -72,6 +74,7 @@ export async function updateTransaction(
   txId: string,
   data: Partial<Omit<Transaction, "id" | "createdAt">>
 ): Promise<void> {
+  assertOwner(uid);
   await updateDoc(doc(db, "users", uid, "books", bookId, "transactions", txId), withoutUndefined(data));
 }
 
@@ -80,6 +83,7 @@ export async function deleteTransaction(
   bookId: string,
   txId: string
 ): Promise<void> {
+  assertOwner(uid);
   await deleteDoc(doc(db, "users", uid, "books", bookId, "transactions", txId));
 }
 
@@ -89,6 +93,7 @@ export async function transferTransaction(
   toBookId: string,
   tx: Transaction
 ): Promise<void> {
+  assertOwner(uid);
   const batch = writeBatch(db);
   const newRef = doc(txRef(uid, toBookId));
   const { id: _id, ...txData } = tx;
@@ -106,6 +111,8 @@ export interface ImportableTransaction {
   date: Timestamp;
   note?: string;
   tags: string[];
+  source?: import("../types").TransactionSource;
+  sourceKey?: string;
 }
 
 export async function batchImportTransactions(

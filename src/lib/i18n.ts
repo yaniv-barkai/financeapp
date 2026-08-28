@@ -51,7 +51,6 @@ export interface Translations {
   dashboard_recent_transactions: string;
   dashboard_no_transactions: string;
   dashboard_edit_transaction: string;
-  dashboard_recurring_uncheck_confirm: string;
   dashboard_no_category_transactions: string;
   dashboard_income_wrong_category: string;
   dashboard_income_missing_category: string;
@@ -146,6 +145,26 @@ export interface Translations {
   settings_rebuild_memory_desc: string;
   settings_rebuilding: string;
   settings_rebuild_done: string;
+
+  settings_max_title: string;
+  settings_max_description: string;
+  settings_max_secrets_title: string;
+  settings_max_secrets_steps: string;
+  settings_max_run_workflow: string;
+  settings_max_last_sync: string;
+  settings_max_never: string;
+  settings_max_status_ok: string;
+  settings_max_status_error: string;
+  settings_max_status_running: string;
+  settings_max_imported: string;
+  settings_max_book: string;
+
+  settings_alerts_title: string;
+  settings_alerts_description: string;
+  settings_alerts_email_enabled: string;
+  settings_alerts_email_override: string;
+  settings_alerts_email_placeholder: string;
+  settings_alerts_saved: string;
 
   // Login page
   login_title: string;
@@ -244,6 +263,9 @@ export interface Translations {
   recurring_save: string;
   recurring_create: string;
   recurring_delete_confirm: string;
+  recurring_add_to_transaction: string;
+  recurring_added_to_transaction: string;
+  recurring_add_to_transaction_error: string;
 
   // Transaction form
   form_add_title: string;
@@ -394,7 +416,6 @@ const en: Translations = {
   dashboard_recent_transactions: "Recent Transactions",
   dashboard_no_transactions: "No transactions this month. Use the + button to add one!",
   dashboard_edit_transaction: "Edit Transaction",
-  dashboard_recurring_uncheck_confirm: "Remove this month's booking for this recurring payment?",
   dashboard_no_category_transactions: "No transactions in this category this month.",
   dashboard_income_wrong_category: "Assigned to expense category",
   dashboard_income_missing_category: "Missing category",
@@ -486,6 +507,26 @@ const en: Translations = {
   settings_rebuild_memory_desc: "Re-scan all transactions and rebuild auto-category suggestions from your history. Use this if suggestions stopped working after adding transactions.",
   settings_rebuilding: "Rebuilding…",
   settings_rebuild_done: "Rebuilt {n} merchant categories",
+
+  settings_max_title: "MAX Credit Card Sync",
+  settings_max_description: "Transactions are imported daily via GitHub Actions. Store MAX credentials in your repo Secrets — never in this app.",
+  settings_max_secrets_title: "One-time setup",
+  settings_max_secrets_steps: "In GitHub: Settings → Secrets and variables → Actions. Add MAX_USERNAME, MAX_PASSWORD, FIREBASE_SERVICE_ACCOUNT_KEY, OPENAI_API_KEY, SYNC_USER_UID, and SYNC_BOOK_ID.",
+  settings_max_run_workflow: "Run sync manually",
+  settings_max_last_sync: "Last sync",
+  settings_max_never: "Never",
+  settings_max_status_ok: "Success",
+  settings_max_status_error: "Failed",
+  settings_max_status_running: "Running…",
+  settings_max_imported: "{n} transactions imported",
+  settings_max_book: "Target book",
+
+  settings_alerts_title: "Budget email alerts",
+  settings_alerts_description: "Get an email when any category reaches 80% or 100% of its monthly budget.",
+  settings_alerts_email_enabled: "Enable email alerts",
+  settings_alerts_email_override: "Alert email (optional)",
+  settings_alerts_email_placeholder: "Defaults to your login email",
+  settings_alerts_saved: "Alert settings saved",
 
   login_title: "FinanceApp",
   login_sign_in_description: "Sign in to your account",
@@ -581,6 +622,9 @@ const en: Translations = {
   recurring_save: "Save",
   recurring_create: "Create",
   recurring_delete_confirm: "Delete this recurring item?",
+  recurring_add_to_transaction: "Add to transactions",
+  recurring_added_to_transaction: "Added to this month's transactions",
+  recurring_add_to_transaction_error: "Could not add transaction",
 
   form_add_title: "Add Transaction",
   form_expense: "Expense",
@@ -726,7 +770,6 @@ const he: Translations = {
   dashboard_recent_transactions: "עסקאות אחרונות",
   dashboard_no_transactions: "אין עסקאות החודש. לחץ על + כדי להוסיף!",
   dashboard_edit_transaction: "עריכת עסקה",
-  dashboard_recurring_uncheck_confirm: "להסיר את הרישום החודשי עבור תשלום קבוע זה?",
   dashboard_no_category_transactions: "אין עסקאות בקטגוריה זו החודש.",
   dashboard_income_wrong_category: "משויך לקטגוריית הוצאה",
   dashboard_income_missing_category: "קטגוריה חסרה",
@@ -818,6 +861,26 @@ const he: Translations = {
   settings_rebuild_memory_desc: "סרוק מחדש את כל העסקאות ובנה מחדש את הצעות הקטגוריה האוטומטיות. השתמש בזה אם ההצעות הפסיקו לעבוד.",
   settings_rebuilding: "בונה מחדש…",
   settings_rebuild_done: "שוחזרו {n} ספקים",
+
+  settings_max_title: "סנכרון MAX",
+  settings_max_description: "עסקאות מיובאות יומית דרך GitHub Actions. שמור את פרטי MAX ב-Secrets של הריפו — לא באפליקציה.",
+  settings_max_secrets_title: "הגדרה חד-פעמית",
+  settings_max_secrets_steps: "ב-GitHub: Settings → Secrets and variables → Actions. הוסף MAX_USERNAME, MAX_PASSWORD, FIREBASE_SERVICE_ACCOUNT_KEY, OPENAI_API_KEY, SYNC_USER_UID ו-SYNC_BOOK_ID.",
+  settings_max_run_workflow: "הרץ סנכרון ידנית",
+  settings_max_last_sync: "סנכרון אחרון",
+  settings_max_never: "מעולם לא",
+  settings_max_status_ok: "הצליח",
+  settings_max_status_error: "נכשל",
+  settings_max_status_running: "רץ…",
+  settings_max_imported: "{n} עסקאות יובאו",
+  settings_max_book: "ספר יעד",
+
+  settings_alerts_title: "התראות תקציב במייל",
+  settings_alerts_description: "קבל מייל כשקטגוריה מגיעה ל-80% או 100% מהתקציב החודשי.",
+  settings_alerts_email_enabled: "הפעל התראות במייל",
+  settings_alerts_email_override: "מייל להתראות (אופציונלי)",
+  settings_alerts_email_placeholder: "ברירת מחדל: מייל ההתחברות",
+  settings_alerts_saved: "הגדרות ההתראות נשמרו",
 
   login_title: "FinanceApp",
   login_sign_in_description: "התחבר לחשבונך",
@@ -913,6 +976,9 @@ const he: Translations = {
   recurring_save: "שמור",
   recurring_create: "צור",
   recurring_delete_confirm: "למחוק תשלום קבוע זה?",
+  recurring_add_to_transaction: "הוסף לעסקאות",
+  recurring_added_to_transaction: "נוסף לעסקאות החודש",
+  recurring_add_to_transaction_error: "לא ניתן להוסיף עסקה",
 
   form_add_title: "הוסף עסקה",
   form_expense: "הוצאה",

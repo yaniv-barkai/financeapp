@@ -30,6 +30,8 @@ export interface CategoryLimit {
   monthlyLimit: number;
 }
 
+export type TransactionSource = "manual" | "csv" | "max";
+
 export interface Transaction {
   id: string;
   type: TransactionType;
@@ -42,6 +44,8 @@ export interface Transaction {
   tags: string[];
   splits?: Array<{ categoryId: string; amount: number }>;
   recurringId?: string;
+  source?: TransactionSource;
+  sourceKey?: string;
   createdAt: Timestamp;
 }
 
@@ -75,10 +79,33 @@ export interface Tag {
   color: string;
 }
 
+export type MaxSyncStatus = "ok" | "error" | "running";
+
+export interface MaxSyncSettings {
+  bookId: string;
+  lastSyncAt?: Timestamp;
+  lastSyncStatus?: MaxSyncStatus;
+  lastSyncError?: string;
+  lastSyncCount?: number;
+}
+
+export interface AlertSettings {
+  emailEnabled: boolean;
+  alertEmail?: string;
+  thresholds: number[];
+}
+
 export interface UserSettings {
   defaultBookId: string;
   currency: string;
   createdAt: Timestamp;
+  maxSync?: MaxSyncSettings;
+  alertSettings?: AlertSettings;
+}
+
+export interface AlertStateDoc {
+  lastThresholdSent: number;
+  sentAt: Timestamp;
 }
 
 export interface CsvRow {

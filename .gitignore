@@ -33,6 +33,11 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# Firebase service account key (local sync only)
+.secrets/
+scripts/max-sync/node_modules/
+scripts/max-sync/last-scrape-preview.json
+
 # vercel
 .vercel
 

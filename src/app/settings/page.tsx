@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Pencil, Trash2, LogOut, BookOpen, Globe, BrainCircuit } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Pencil, Trash2, LogOut, BookOpen, Globe, BrainCircuit, CreditCard, Bell, ExternalLink } from "lucide-react";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useAppStore } from "@/lib/store";
@@ -9,7 +9,7 @@ import { useLocale } from "@/components/providers/LocaleProvider";
 import { updateBook, deleteBook, getBooks } from "@/lib/firestore/books";
 import { getAllTransactions } from "@/lib/firestore/transactions";
 import { rebuildMerchantMemory, getMerchants } from "@/lib/firestore/merchants";
-import { setUserSettings } from "@/lib/firestore/settings";
+import { setUserSettings, getUserSettings } from "@/lib/firestore/settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,7 +29,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import type { Locale } from "@/lib/i18n";
+import { Checkbox } from "@/components/ui/checkbox";
+import type { AlertSettings, MaxSyncSettings } from "@/lib/types";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
 import { toast } from "sonner";
 
@@ -50,6 +51,55 @@ export default function SettingsPage() {
   const [editBook, setEditBook] = useState<{ id: string; name: string; color: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [rebuilding, setRebuilding] = useState(false);
+  const [maxSync, setMaxSync] = useState<MaxSyncSettings | null>(null);
+  const [alertEmailEnabled, setAlertEmailEnabled] = useState(true);
+  const [alertEmail, setAlertEmail] = useState("");
+  const [alertsSaving, setAlertsSaving] = useState(false);
+
+  const githubRepo = process.env.NEXT_PUBLIC_GITHUB_REPO;
+  const workflowUrl = githubRepo
+    ? `https://github.com/${githubRepo}/actions/workflows/max-sync.yml`
+    : null;
+
+  useEffect(() => {
+    if (!user) return;
+    getUserSettings(user.uid).then((s) => {
+      if (s?.maxSync) setMaxSync(s.maxSync);
+      if (s?.alertSettings) {
+        setAlertEmailEnabled(s.alertSettings.emailEnabled !== false);
+        setAlertEmail(s.alertSettings.alertEmail ?? "");
+      }
+    });
+  }, [user]);
+
+  const handleSaveAlerts = async () => {
+    if (!user) return;
+    setAlertsSaving(true);
+    try {
+      const alertSettings: AlertSettings = {
+        emailEnabled: alertEmailEnabled,
+        thresholds: [80, 100],
+        ...(alertEmail.trim() ? { alertEmail: alertEmail.trim() } : {}),
+      };
+      await setUserSettings(user.uid, { alertSettings });
+      toast.success(t.settings_alerts_saved);
+    } finally {
+      setAlertsSaving(false);
+    }
+  };
+
+  const handleSaveMaxBook = async (bookId: string) => {
+    if (!user) return;
+    const next: MaxSyncSettings = { ...maxSync, bookId };
+    await setUserSettings(user.uid, { maxSync: next });
+    setMaxSync(next);
+    toast.success(t.settings_save);
+  };
+
+  const formatSyncTime = (ts?: { toDate?: () => Date }) => {
+    if (!ts?.toDate) return t.settings_max_never;
+    return ts.toDate().toLocaleString(locale === "he" ? "he-IL" : "en-IL");
+  };
 
   const handleRebuildMemory = async () => {
     if (!user) return;
@@ -200,6 +250,101 @@ export default function SettingsPage() {
               </Button>
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      {/* MAX Sync */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <CreditCard className="h-4 w-4" /> {t.settings_max_title}
+          </CardTitle>
+          <CardDescription>{t.settings_max_description}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <p className="text-sm font-medium mb-1">{t.settings_max_secrets_title}</p>
+            <p className="text-sm text-muted-foreground">{t.settings_max_secrets_steps}</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>{t.settings_max_book}</Label>
+            <Select
+              value={maxSync?.bookId ?? activeBookId ?? undefined}
+              onValueChange={handleSaveMaxBook}
+            >
+              <SelectTrigger className="w-full max-w-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {books.map((book) => (
+                  <SelectItem key={book.id} value={book.id}>{book.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="text-sm space-y-1">
+            <p>
+              <span className="text-muted-foreground">{t.settings_max_last_sync}: </span>
+              {formatSyncTime(maxSync?.lastSyncAt as { toDate?: () => Date } | undefined)}
+            </p>
+            {maxSync?.lastSyncStatus && (
+              <p>
+                <span className="text-muted-foreground">Status: </span>
+                {maxSync.lastSyncStatus === "ok" && t.settings_max_status_ok}
+                {maxSync.lastSyncStatus === "error" && t.settings_max_status_error}
+                {maxSync.lastSyncStatus === "running" && t.settings_max_status_running}
+                {maxSync.lastSyncStatus === "ok" && maxSync.lastSyncCount != null && (
+                  <> — {t.settings_max_imported.replace("{n}", String(maxSync.lastSyncCount))}</>
+                )}
+              </p>
+            )}
+            {maxSync?.lastSyncError && maxSync.lastSyncStatus === "error" && (
+              <p className="text-destructive text-xs">{maxSync.lastSyncError}</p>
+            )}
+          </div>
+
+          {workflowUrl && (
+            <Button variant="outline" size="sm" className="gap-2" asChild>
+              <a href={workflowUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-3.5 w-3.5" />
+                {t.settings_max_run_workflow}
+              </a>
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Budget alerts */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Bell className="h-4 w-4" /> {t.settings_alerts_title}
+          </CardTitle>
+          <CardDescription>{t.settings_alerts_description}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="alert-email"
+              checked={alertEmailEnabled}
+              onCheckedChange={(v) => setAlertEmailEnabled(v === true)}
+            />
+            <Label htmlFor="alert-email">{t.settings_alerts_email_enabled}</Label>
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t.settings_alerts_email_override}</Label>
+            <Input
+              type="email"
+              placeholder={t.settings_alerts_email_placeholder}
+              value={alertEmail}
+              onChange={(e) => setAlertEmail(e.target.value)}
+            />
+          </div>
+          <Button size="sm" onClick={handleSaveAlerts} disabled={alertsSaving}>
+            {alertsSaving ? t.settings_saving : t.settings_save}
+          </Button>
         </CardContent>
       </Card>
 
