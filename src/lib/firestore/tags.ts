@@ -8,8 +8,10 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { Tag } from "../types";
+import { assertOwner } from "./auth";
 
 function tagsRef(uid: string, bookId: string) {
+  assertOwner(uid);
   return collection(db, "users", uid, "books", bookId, "tags");
 }
 
@@ -34,6 +36,7 @@ export async function updateTag(
   tagId: string,
   data: Partial<Omit<Tag, "id">>
 ): Promise<void> {
+  assertOwner(uid);
   await updateDoc(doc(db, "users", uid, "books", bookId, "tags", tagId), data);
 }
 
@@ -42,5 +45,6 @@ export async function deleteTag(
   bookId: string,
   tagId: string
 ): Promise<void> {
+  assertOwner(uid);
   await deleteDoc(doc(db, "users", uid, "books", bookId, "tags", tagId));
 }

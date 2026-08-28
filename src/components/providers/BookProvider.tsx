@@ -6,7 +6,6 @@ import { useAppStore } from "@/lib/store";
 import { getCategories } from "@/lib/firestore/categories";
 import { getMerchants } from "@/lib/firestore/merchants";
 import { getTags } from "@/lib/firestore/tags";
-import { reconcileRecurring } from "@/lib/firestore/recurring";
 
 export function BookProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -27,7 +26,6 @@ export function BookProvider({ children }: { children: React.ReactNode }) {
           setCategories(cats);
           setMerchants(merchants);
           setTags(tags);
-          reconcileRecurring(user.uid, activeBookId).catch(console.error);
         }
       } catch (err: unknown) {
         const isOffline = err instanceof Error && err.message.includes("client is offline");

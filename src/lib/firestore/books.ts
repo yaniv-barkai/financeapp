@@ -13,8 +13,10 @@ import {
 import { db } from "../firebase";
 import { Book } from "../types";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "../seeds";
+import { assertOwner } from "./auth";
 
 function booksRef(uid: string) {
+  assertOwner(uid);
   return collection(db, "users", uid, "books");
 }
 
@@ -43,10 +45,12 @@ export async function updateBook(
   bookId: string,
   data: Partial<Pick<Book, "name" | "color" | "currency">>
 ): Promise<void> {
+  assertOwner(uid);
   await updateDoc(doc(db, "users", uid, "books", bookId), data);
 }
 
 export async function deleteBook(uid: string, bookId: string): Promise<void> {
+  assertOwner(uid);
   await deleteDoc(doc(db, "users", uid, "books", bookId));
 }
 

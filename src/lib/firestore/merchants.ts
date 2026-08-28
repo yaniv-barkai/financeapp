@@ -10,8 +10,10 @@ import {
 import { db } from "../firebase";
 import { Merchant, Transaction } from "../types";
 import { normalizemerchant } from "../utils";
+import { assertOwner } from "./auth";
 
 function merchantsRef(uid: string, bookId: string) {
+  assertOwner(uid);
   return collection(db, "users", uid, "books", bookId, "merchants");
 }
 
@@ -29,6 +31,7 @@ export async function upsertMerchant(
   displayName: string,
   categoryId: string
 ): Promise<void> {
+  assertOwner(uid);
   const normalized = normalizemerchant(displayName);
   if (!normalized) return;
   const ref = doc(db, "users", uid, "books", bookId, "merchants", normalized);
@@ -64,6 +67,7 @@ export async function rebuildMerchantMemory(
   bookId: string,
   transactions: Transaction[]
 ): Promise<number> {
+  assertOwner(uid);
   const merchantMap = new Map<string, { display: string; categoryId: string }>();
 
   for (const tx of transactions) {

@@ -10,6 +10,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { BudgetPeriod, Category, CategoryLimit } from "../types";
+import { assertOwner } from "./auth";
 
 function toMonthlyLimit(amount: number, period: BudgetPeriod): number {
   return period === "yearly" ? amount / 12 : amount;
@@ -27,6 +28,7 @@ function parseLimitDoc(data: Record<string, unknown>): CategoryLimit {
 }
 
 function catsRef(uid: string, bookId: string) {
+  assertOwner(uid);
   return collection(db, "users", uid, "books", bookId, "categories");
 }
 
@@ -55,6 +57,7 @@ export async function updateCategory(
   catId: string,
   data: Partial<Omit<Category, "id">>
 ): Promise<void> {
+  assertOwner(uid);
   await updateDoc(doc(db, "users", uid, "books", bookId, "categories", catId), data);
 }
 
@@ -63,6 +66,7 @@ export async function updateCategoryOrders(
   bookId: string,
   orderedIds: string[]
 ): Promise<void> {
+  assertOwner(uid);
   await Promise.all(
     orderedIds.map((catId, idx) =>
       updateDoc(doc(db, "users", uid, "books", bookId, "categories", catId), { order: idx })
@@ -75,6 +79,7 @@ export async function deleteCategory(
   bookId: string,
   catId: string
 ): Promise<void> {
+  assertOwner(uid);
   await deleteDoc(doc(db, "users", uid, "books", bookId, "categories", catId));
 }
 
@@ -83,6 +88,7 @@ export async function getCategoryLimit(
   bookId: string,
   catId: string
 ): Promise<CategoryLimit | null> {
+  assertOwner(uid);
   const { getDoc } = await import("firebase/firestore");
   const ref = doc(
     db,
@@ -107,6 +113,7 @@ export async function setCategoryLimit(
   budgetAmount: number,
   budgetPeriod: BudgetPeriod = "monthly"
 ): Promise<void> {
+  assertOwner(uid);
   const { setDoc } = await import("firebase/firestore");
   const ref = doc(
     db,
@@ -127,6 +134,7 @@ export async function removeCategoryLimit(
   bookId: string,
   catId: string
 ): Promise<void> {
+  assertOwner(uid);
   const { deleteDoc: del } = await import("firebase/firestore");
   const ref = doc(
     db,
@@ -147,6 +155,7 @@ export async function getAllLimits(
   bookId: string,
   categories: Category[]
 ): Promise<Record<string, number>> {
+  assertOwner(uid);
   const details = await getAllLimitDetails(uid, bookId, categories);
   return Object.fromEntries(
     Object.entries(details).map(([catId, d]) => [catId, d.monthlyLimit])

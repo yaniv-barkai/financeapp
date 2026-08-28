@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage, type StateStorage } from "zustand/middleware";
 import { Book, Category, Merchant, Tag } from "./types";
 
 export type DashboardSectionId = "summary" | "budgets" | "recurring" | "transactions";
@@ -38,6 +38,35 @@ function currentMonthKey(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
+let storeUserId: string | null = null;
+
+function storageKey(): string {
+  return storeUserId ? `finance-app-store:${storeUserId}` : "finance-app-store:anon";
+}
+
+const userScopedStorage: StateStorage = {
+  getItem: () => localStorage.getItem(storageKey()),
+  setItem: (_name, value) => localStorage.setItem(storageKey(), value),
+  removeItem: () => localStorage.removeItem(storageKey()),
+};
+
+/** Switch persisted preferences to the signed-in user's namespace. */
+export function setStoreUserId(uid: string | null): void {
+  storeUserId = uid;
+}
+
+/** Clear in-memory user data (books, categories, etc.) on sign-out or account switch. */
+export function clearUserSession(): void {
+  useAppStore.setState({
+    activeBookId: null,
+    books: [],
+    categories: [],
+    merchants: [],
+    tags: [],
+    txVersion: 0,
+  });
+}
+
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
@@ -63,6 +92,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "finance-app-store",
+      storage: createJSONStorage(() => userScopedStorage),
       partialize: (state) => ({
         activeBookId: state.activeBookId,
         currency: state.currency,

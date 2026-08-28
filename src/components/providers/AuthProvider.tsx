@@ -14,8 +14,7 @@ import { getUserSettings, initUserSettings } from "@/lib/firestore/settings";
 import { getBooks, seedDefaultBook } from "@/lib/firestore/books";
 import { getCategories } from "@/lib/firestore/categories";
 import { getMerchants } from "@/lib/firestore/merchants";
-import { reconcileRecurring } from "@/lib/firestore/recurring";
-import { useAppStore } from "@/lib/store";
+import { useAppStore, setStoreUserId, clearUserSession } from "@/lib/store";
 
 interface AuthContextValue {
   user: User | null;
@@ -63,8 +62,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setCategories(cats);
           const merchants = await getMerchants(u.uid, validBook.id);
           setMerchants(merchants);
-
-          reconcileRecurring(u.uid, validBook.id).catch(console.error);
         }
       } catch (err: unknown) {
         const isOffline =
@@ -78,14 +75,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const unsub = onAuthStateChanged(auth, async (u) => {
+      setStoreUserId(u?.uid ?? null);
+
+      if (u) {
+        clearUserSession();
+        await useAppStore.persist.rehydrate();
+      }
+
       setUser(u);
       if (u) {
         await loadUserData(u);
       } else {
-        setBooks([]);
-        setCategories([]);
-        setMerchants([]);
-        setActiveBookId(null);
+        clearUserSession();
       }
       setLoading(false);
     });
