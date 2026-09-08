@@ -88,6 +88,20 @@ export interface Tag {
   color: string;
 }
 
+export type TaskStatus = "open" | "done";
+export type TaskCostFrequency = "once" | "monthly" | "yearly";
+
+export interface Task {
+  id: string;
+  title: string;
+  note?: string;
+  endDate: Timestamp;
+  status: TaskStatus;
+  transactionIds: string[];
+  costFrequency: TaskCostFrequency;
+  createdAt: Timestamp;
+}
+
 export type MaxSyncStatus = "ok" | "error" | "running";
 
 export interface MaxSyncSettings {

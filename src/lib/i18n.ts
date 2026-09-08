@@ -12,6 +12,7 @@ export interface Translations {
   budget_summary_subtitle: string;
   budget_all_categories: string;
   nav_recurring: string;
+  nav_tasks: string;
   nav_settings: string;
   nav_sign_out: string;
   nav_search_placeholder: string;
@@ -300,6 +301,43 @@ export interface Translations {
   recurring_added_to_transaction: string;
   recurring_add_to_transaction_error: string;
 
+  // Tasks page
+  tasks_title: string;
+  tasks_add: string;
+  tasks_no_items: string;
+  tasks_tab_open: string;
+  tasks_tab_done: string;
+  tasks_tab_all: string;
+  tasks_edit_title: string;
+  tasks_new_title: string;
+  tasks_title_label: string;
+  tasks_title_placeholder: string;
+  tasks_note: string;
+  tasks_note_placeholder: string;
+  tasks_end_date: string;
+  tasks_cost_frequency: string;
+  tasks_freq_once: string;
+  tasks_freq_monthly: string;
+  tasks_freq_yearly: string;
+  tasks_possible_savings: string;
+  tasks_projected_yearly: string;
+  tasks_overdue: string;
+  tasks_due: string;
+  tasks_mark_done: string;
+  tasks_mark_open: string;
+  tasks_attach_transactions: string;
+  tasks_search_transactions: string;
+  tasks_no_matching_transactions: string;
+  tasks_attached: string;
+  tasks_cancel: string;
+  tasks_saving: string;
+  tasks_save: string;
+  tasks_create: string;
+  tasks_delete: string;
+  tasks_delete_confirm: string;
+  tasks_status_open: string;
+  tasks_status_done: string;
+
   // Transaction form
   form_add_title: string;
   form_expense: string;
@@ -414,6 +452,7 @@ const en: Translations = {
   budget_summary_subtitle: "Based on active recurring items",
   budget_all_categories: "All Categories",
   nav_recurring: "Recurring",
+  nav_tasks: "Tasks",
   nav_settings: "Settings",
   nav_sign_out: "Sign out",
   nav_search_placeholder: "Search…",
@@ -690,6 +729,42 @@ const en: Translations = {
   recurring_added_to_transaction: "Added to this month's transactions",
   recurring_add_to_transaction_error: "Could not add transaction",
 
+  tasks_title: "Tasks",
+  tasks_add: "Add Task",
+  tasks_no_items: "No tasks yet.",
+  tasks_tab_open: "Open",
+  tasks_tab_done: "Done",
+  tasks_tab_all: "All",
+  tasks_edit_title: "Edit Task",
+  tasks_new_title: "New Task",
+  tasks_title_label: "Title",
+  tasks_title_placeholder: "e.g. Move CC to another bank",
+  tasks_note: "Note",
+  tasks_note_placeholder: "Optional note",
+  tasks_end_date: "End date",
+  tasks_cost_frequency: "Cost frequency",
+  tasks_freq_once: "One-time",
+  tasks_freq_monthly: "Monthly",
+  tasks_freq_yearly: "Yearly",
+  tasks_possible_savings: "Possible savings",
+  tasks_projected_yearly: "/yr",
+  tasks_overdue: "Overdue",
+  tasks_due: "Due",
+  tasks_mark_done: "Mark done",
+  tasks_mark_open: "Reopen",
+  tasks_attach_transactions: "Attach transactions",
+  tasks_search_transactions: "Search merchant or note…",
+  tasks_no_matching_transactions: "No matching transactions.",
+  tasks_attached: "Attached",
+  tasks_cancel: "Cancel",
+  tasks_saving: "Saving…",
+  tasks_save: "Save",
+  tasks_create: "Create",
+  tasks_delete: "Delete",
+  tasks_delete_confirm: "Delete this task?",
+  tasks_status_open: "Open",
+  tasks_status_done: "Done",
+
   form_add_title: "Add Transaction",
   form_expense: "Expense",
   form_income: "Income",
@@ -799,6 +874,7 @@ const he: Translations = {
   budget_summary_subtitle: "לפי תשלומים קבועים פעילים",
   budget_all_categories: "כל הקטגוריות",
   nav_recurring: "תשלומים קבועים",
+  nav_tasks: "משימות",
   nav_settings: "הגדרות",
   nav_sign_out: "התנתק",
   nav_search_placeholder: "חיפוש…",
@@ -1074,6 +1150,42 @@ const he: Translations = {
   recurring_add_to_transaction: "הוסף לעסקאות",
   recurring_added_to_transaction: "נוסף לעסקאות החודש",
   recurring_add_to_transaction_error: "לא ניתן להוסיף עסקה",
+
+  tasks_title: "משימות",
+  tasks_add: "הוסף משימה",
+  tasks_no_items: "אין משימות עדיין.",
+  tasks_tab_open: "פתוחות",
+  tasks_tab_done: "בוצעו",
+  tasks_tab_all: "הכל",
+  tasks_edit_title: "עריכת משימה",
+  tasks_new_title: "משימה חדשה",
+  tasks_title_label: "כותרת",
+  tasks_title_placeholder: "לדוגמה: העברת כרטיס אשראי לבנק אחר",
+  tasks_note: "הערה",
+  tasks_note_placeholder: "הערה אופציונלית",
+  tasks_end_date: "תאריך סיום",
+  tasks_cost_frequency: "תדירות עלות",
+  tasks_freq_once: "חד־פעמי",
+  tasks_freq_monthly: "חודשי",
+  tasks_freq_yearly: "שנתי",
+  tasks_possible_savings: "חיסכון אפשרי",
+  tasks_projected_yearly: "/שנה",
+  tasks_overdue: "באיחור",
+  tasks_due: "עד",
+  tasks_mark_done: "סמן כבוצע",
+  tasks_mark_open: "פתח מחדש",
+  tasks_attach_transactions: "צרף עסקאות",
+  tasks_search_transactions: "חפש ספק או הערה…",
+  tasks_no_matching_transactions: "לא נמצאו עסקאות תואמות.",
+  tasks_attached: "מצורפות",
+  tasks_cancel: "ביטול",
+  tasks_saving: "שומר…",
+  tasks_save: "שמור",
+  tasks_create: "צור",
+  tasks_delete: "מחק",
+  tasks_delete_confirm: "למחוק משימה זו?",
+  tasks_status_open: "פתוחה",
+  tasks_status_done: "בוצעה",
 
   form_add_title: "הוסף עסקה",
   form_expense: "הוצאה",

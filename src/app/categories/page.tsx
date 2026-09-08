@@ -375,6 +375,7 @@ export default function CategoriesPage() {
 
       {/* Net income summary */}
       <Card
+        dir={isRtl ? "rtl" : "ltr"}
         className={cn(
           monthlyNet < 0 && "border-red-200 bg-red-50/60 dark:border-red-900/50 dark:bg-red-950/25"
         )}
@@ -384,22 +385,22 @@ export default function CategoriesPage() {
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <div className="grid grid-cols-3 gap-3">
-            <div className={cn("flex flex-col gap-1", isRtl && "items-end")}>
-              <span className={cn("flex items-center gap-1.5 text-xs text-muted-foreground", isRtl && "flex-row-reverse")}>
+            <div className="flex flex-col gap-1 items-start">
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <TrendingUp className="h-3.5 w-3.5 text-green-500" />
                 {t.budget_summary_income}
               </span>
               <span className="text-lg font-bold text-green-600 tabular-nums" dir="ltr">{formatCurrency(monthlyIncome, currency)}</span>
             </div>
-            <div className={cn("flex flex-col gap-1", isRtl && "items-end")}>
-              <span className={cn("flex items-center gap-1.5 text-xs text-muted-foreground", isRtl && "flex-row-reverse")}>
+            <div className="flex flex-col gap-1 items-start">
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <TrendingDown className="h-3.5 w-3.5 text-red-500" />
                 {t.budget_summary_expenses}
               </span>
               <span className="text-lg font-bold text-red-500 tabular-nums" dir="ltr">{formatCurrency(monthlyExpenses, currency)}</span>
             </div>
-            <div className={cn("flex flex-col gap-1", isRtl && "items-end")}>
-              <span className={cn("flex items-center gap-1.5 text-xs text-muted-foreground", isRtl && "flex-row-reverse")}>
+            <div className="flex flex-col gap-1 items-start">
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Wallet className="h-3.5 w-3.5" />
                 {t.budget_summary_net}
               </span>

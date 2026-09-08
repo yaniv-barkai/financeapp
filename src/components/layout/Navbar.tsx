@@ -14,6 +14,7 @@ import {
   LogOut,
   Wallet,
   PieChart,
+  CheckSquare,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useLocale } from "@/components/providers/LocaleProvider";
@@ -33,6 +34,7 @@ export function Navbar() {
     { href: "/import", label: t.nav_import_csv, icon: Upload },
     { href: "/categories", label: t.nav_categories, icon: BarChart3 },
     { href: "/recurring", label: t.nav_recurring, icon: RefreshCw },
+    { href: "/tasks", label: t.nav_tasks, icon: CheckSquare },
     { href: "/settings", label: t.nav_settings, icon: Settings },
   ];
 

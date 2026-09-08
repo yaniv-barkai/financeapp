@@ -412,7 +412,7 @@ export function MonthlyBudgetEditor() {
       {/* Sticky live summary — stays visible while editing category amounts */}
       <div className="sticky top-14 z-20 border-y bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 px-4 py-3">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-0.5 items-start">
             <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
               <TrendingUp className="h-3 w-3 text-green-500" />
               {t.monthly_budget_income}
@@ -421,7 +421,7 @@ export function MonthlyBudgetEditor() {
               {formatCurrency(monthlyIncome, currency)}
             </span>
           </div>
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-0.5 items-start">
             <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
               <TrendingDown className="h-3 w-3 text-red-500" />
               {t.monthly_budget_total}
@@ -430,7 +430,7 @@ export function MonthlyBudgetEditor() {
               {formatCurrency(totalBudget, currency)}
             </span>
           </div>
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-0.5 items-start">
             <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
               <Wallet className="h-3 w-3" />
               {t.monthly_budget_left}
@@ -445,7 +445,7 @@ export function MonthlyBudgetEditor() {
               {formatCurrency(budgetLeft, currency)}
             </span>
           </div>
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-0.5 items-start">
             <span className="text-[11px] text-muted-foreground">{t.monthly_budget_spent}</span>
             <span className="text-base font-semibold tabular-nums text-foreground" dir="ltr">
               {formatCurrency(totalSpent, currency)}
@@ -528,17 +528,21 @@ export function MonthlyBudgetEditor() {
                       )}
                     </div>
                   </button>
-                  <div className="w-full text-xs tabular-nums text-muted-foreground sm:w-[90px] sm:shrink-0 sm:text-center">
+                  <div className="w-full text-start text-xs tabular-nums text-muted-foreground sm:w-[90px] sm:shrink-0 sm:text-center">
                     <span className={cn("sm:hidden text-muted-foreground me-1", align)}>
                       {t.monthly_budget_col_recurring}:
                     </span>
-                    <span dir="ltr">{rec > 0 ? formatCurrency(rec, currency) : "—"}</span>
+                    <span dir="ltr" className="inline-block">
+                      {rec > 0 ? formatCurrency(rec, currency) : "—"}
+                    </span>
                   </div>
-                  <div className="w-full text-xs tabular-nums text-muted-foreground sm:w-[90px] sm:shrink-0 sm:text-center">
+                  <div className="w-full text-start text-xs tabular-nums text-muted-foreground sm:w-[90px] sm:shrink-0 sm:text-center">
                     <span className={cn("sm:hidden text-muted-foreground me-1", align)}>
                       {t.monthly_budget_col_prev}:
                     </span>
-                    <span dir="ltr">{prev > 0 ? formatCurrency(prev, currency) : "—"}</span>
+                    <span dir="ltr" className="inline-block">
+                      {prev > 0 ? formatCurrency(prev, currency) : "—"}
+                    </span>
                   </div>
                   <Input
                     type="number"
@@ -547,6 +551,7 @@ export function MonthlyBudgetEditor() {
                     inputMode="decimal"
                     className={cn(
                       "h-8 w-full text-sm tabular-nums sm:w-[110px] sm:shrink-0",
+                      isRtl && "text-right",
                       belowRecurring && "border-red-500 text-red-700 focus-visible:ring-red-500"
                     )}
                     placeholder="0"
