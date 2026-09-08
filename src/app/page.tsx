@@ -25,7 +25,8 @@ import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useAppStore } from "@/lib/store";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { getTransactionsByMonth, deleteTransaction } from "@/lib/firestore/transactions";
-import { getAllLimits, updateCategoryOrders } from "@/lib/firestore/categories";
+import { getLimitsForMonth } from "@/lib/firestore/budgets";
+import { updateCategoryOrders } from "@/lib/firestore/categories";
 import { skipRecurringPeriod } from "@/lib/firestore/recurring";
 import { Transaction } from "@/lib/types";
 import { formatCurrency, formatDate, getMonthRange, getPrevMonthKey, getMonthKey } from "@/lib/utils";
@@ -101,14 +102,15 @@ export default function DashboardPage() {
       // Only fetch rollover history if the current month is after the origin
       const needsRollover = start > rolloverOrigin;
 
-      const [txs, lims, historyTxs] = await Promise.all([
+      const [txs, limResult, historyTxs] = await Promise.all([
         getTransactionsByMonth(user.uid, activeBookId, start, end),
-        getAllLimits(user.uid, activeBookId, categories),
+        getLimitsForMonth(user.uid, activeBookId, activeMonth, categories),
         needsRollover
           ? getTransactionsByMonth(user.uid, activeBookId, rolloverOrigin, prevEnd)
           : Promise.resolve([]),
       ]);
       setTransactions(txs);
+      const lims = limResult.limits;
       setLimits(lims);
 
       if (!needsRollover) {
@@ -125,19 +127,38 @@ export default function DashboardPage() {
         byMonth[mk][tx.categoryId] = (byMonth[mk][tx.categoryId] ?? 0) + delta;
       });
 
+      // Load per-month budgets for rollover history (fall back to current limits)
+      const monthKeys: string[] = [];
+      {
+        const cursor = new Date(rolloverOrigin);
+        while (cursor <= prevEnd) {
+          monthKeys.push(getMonthKey(cursor));
+          cursor.setMonth(cursor.getMonth() + 1);
+        }
+      }
+      const limitsByMonth: Record<string, Record<string, number>> = {};
+      await Promise.all(
+        monthKeys.map(async (mk) => {
+          const { limits } = await getLimitsForMonth(user.uid, activeBookId, mk, categories);
+          limitsByMonth[mk] = limits;
+        })
+      );
+
       // Walk every month from rolloverOrigin up to (and including) prev month,
       // accumulating net = spent - limit for each category.
-      // Positive net = debt carried forward; negative = credit (clamps debt toward 0).
       const overspend: Record<string, number> = {};
       categories
         .filter((c) => c.type === "expense")
         .forEach((cat) => {
-          const lim = lims[cat.id];
-          if (!lim || lim <= 0) return;
           let debt = 0;
           const cursor = new Date(rolloverOrigin);
           while (cursor <= prevEnd) {
             const mk = getMonthKey(cursor);
+            const lim = limitsByMonth[mk]?.[cat.id] ?? lims[cat.id];
+            if (!lim || lim <= 0) {
+              cursor.setMonth(cursor.getMonth() + 1);
+              continue;
+            }
             const spent = Math.max(0, byMonth[mk]?.[cat.id] ?? 0);
             debt += spent - lim;
             cursor.setMonth(cursor.getMonth() + 1);

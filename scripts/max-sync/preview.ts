@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import "./load-env.js";
 import { scrapeMaxTransactions } from "./scrape.js";
-import { requireEnv } from "./utils.js";
+import { israelCalendarDay, requireEnv } from "./utils.js";
 
 const packageDir = dirname(fileURLToPath(import.meta.url));
 const previewPath = resolve(packageDir, "last-scrape-preview.json");
@@ -34,7 +34,7 @@ async function main() {
 
   const sorted = [...rows].sort((a, b) => b.date.getTime() - a.date.getTime());
   for (const row of sorted.slice(0, 30)) {
-    const day = row.date.toISOString().slice(0, 10);
+    const day = israelCalendarDay(row.date);
     const amt = row.amount.toFixed(2).padStart(8);
     console.log(`${day}  ${amt}  ${row.merchantDisplay}`);
   }
@@ -43,7 +43,7 @@ async function main() {
   }
 
   const payload = sorted.map((row) => ({
-    date: row.date.toISOString().slice(0, 10),
+    date: israelCalendarDay(row.date),
     amount: row.amount,
     merchant: row.merchantDisplay,
     merchantNormalized: row.merchantNormalized,

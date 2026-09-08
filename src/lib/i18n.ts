@@ -60,6 +60,8 @@ export interface Translations {
 
   // Transactions page
   transactions_title: string;
+  transactions_last_updated: string;
+  transactions_last_updated_never: string;
   transactions_search_placeholder: string;
   transactions_all_types: string;
   transactions_expense: string;
@@ -122,6 +124,37 @@ export interface Translations {
   categories_translate: string;
   categories_translating: string;
   dashboard_budget: string;
+
+  // Monthly budget editor
+  monthly_budget_title: string;
+  monthly_budget_save: string;
+  monthly_budget_saved: string;
+  monthly_budget_save_error: string;
+  monthly_budget_loading: string;
+  monthly_budget_total: string;
+  monthly_budget_income: string;
+  monthly_budget_left: string;
+  monthly_budget_not_set: string;
+  monthly_budget_seeded_previous: string;
+  monthly_budget_seeded_legacy: string;
+  monthly_budget_col_category: string;
+  monthly_budget_col_recurring: string;
+  monthly_budget_col_prev: string;
+  monthly_budget_col_budget: string;
+  monthly_budget_spent: string;
+  monthly_budget_suggest: string;
+  monthly_budget_suggesting: string;
+  monthly_budget_suggest_error: string;
+  monthly_budget_suggest_title: string;
+  monthly_budget_suggest_apply: string;
+  monthly_budget_suggest_applied: string;
+  monthly_budget_suggest_empty: string;
+  monthly_budget_suggest_remove: string;
+  monthly_budget_suggest_amount: string;
+  monthly_budget_suggest_kept: string;
+  monthly_budget_below_recurring: string;
+  monthly_budget_tx_count: string;
+  monthly_budget_no_transactions: string;
 
   // Settings page
   settings_title: string;
@@ -424,6 +457,8 @@ const en: Translations = {
   dashboard_budget_rollover: "carried from last month",
 
   transactions_title: "Transactions",
+  transactions_last_updated: "Last updated",
+  transactions_last_updated_never: "Never",
   transactions_search_placeholder: "Search…",
   transactions_all_types: "All types",
   transactions_expense: "Expense",
@@ -485,6 +520,35 @@ const en: Translations = {
   categories_translate: "Auto-translate",
   categories_translating: "Translating…",
   dashboard_budget: "Monthly Budget",
+  monthly_budget_title: "Monthly budget",
+  monthly_budget_save: "Save budget",
+  monthly_budget_saved: "Monthly budget saved",
+  monthly_budget_save_error: "Could not save budget",
+  monthly_budget_loading: "Loading budget…",
+  monthly_budget_total: "Budgeted",
+  monthly_budget_income: "Income",
+  monthly_budget_left: "Left",
+  monthly_budget_not_set: "Budget not set for this month yet — edit and save",
+  monthly_budget_seeded_previous: "Pre-filled from last month — review and save",
+  monthly_budget_seeded_legacy: "Pre-filled from your previous limits — review and save",
+  monthly_budget_col_category: "Category",
+  monthly_budget_col_recurring: "Recurring",
+  monthly_budget_col_prev: "Last month",
+  monthly_budget_col_budget: "Budget",
+  monthly_budget_spent: "Spent",
+  monthly_budget_suggest: "Suggest solution",
+  monthly_budget_suggesting: "Thinking…",
+  monthly_budget_suggest_error: "Could not get AI suggestions",
+  monthly_budget_suggest_title: "Suggested reallocation",
+  monthly_budget_suggest_apply: "Apply suggestions",
+  monthly_budget_suggest_applied: "Suggestions applied — save to keep them",
+  monthly_budget_suggest_empty: "No moves needed — gaps look covered.",
+  monthly_budget_suggest_remove: "Remove",
+  monthly_budget_suggest_amount: "New budget",
+  monthly_budget_suggest_kept: "{count} changes ready to apply",
+  monthly_budget_below_recurring: "Below recurring — raise budget to cover fixed costs",
+  monthly_budget_tx_count: "{count} transactions",
+  monthly_budget_no_transactions: "No transactions in this category this month.",
 
   settings_title: "Settings",
   settings_preferences: "Preferences",
@@ -778,6 +842,8 @@ const he: Translations = {
   dashboard_budget_rollover: "הועבר מהחודש הקודם",
 
   transactions_title: "עסקאות",
+  transactions_last_updated: "עודכן לאחרונה",
+  transactions_last_updated_never: "מעולם לא",
   transactions_search_placeholder: "חיפוש…",
   transactions_all_types: "כל הסוגים",
   transactions_expense: "הוצאה",
@@ -839,6 +905,35 @@ const he: Translations = {
   categories_translate: "תרגם אוטומטית",
   categories_translating: "מתרגם…",
   dashboard_budget: "תקציב חודשי",
+  monthly_budget_title: "תקציב חודשי",
+  monthly_budget_save: "שמור תקציב",
+  monthly_budget_saved: "התקציב החודשי נשמר",
+  monthly_budget_save_error: "שמירת התקציב נכשלה",
+  monthly_budget_loading: "טוען תקציב…",
+  monthly_budget_total: "תוקצב",
+  monthly_budget_income: "הכנסה",
+  monthly_budget_left: "נותר",
+  monthly_budget_not_set: "עדיין לא הוגדר תקציב לחודש זה — ערכו ושמרו",
+  monthly_budget_seeded_previous: "מולא לפי החודש הקודם — בדקו ושמרו",
+  monthly_budget_seeded_legacy: "מולא לפי המגבלות הקודמות — בדקו ושמרו",
+  monthly_budget_col_category: "קטגוריה",
+  monthly_budget_col_recurring: "קבוע",
+  monthly_budget_col_prev: "חודש קודם",
+  monthly_budget_col_budget: "תקציב",
+  monthly_budget_spent: "הוצא",
+  monthly_budget_suggest: "הצע פתרון",
+  monthly_budget_suggesting: "חושב…",
+  monthly_budget_suggest_error: "לא ניתן לקבל הצעות AI",
+  monthly_budget_suggest_title: "הצעת הקצאה מחדש",
+  monthly_budget_suggest_apply: "החל הצעות",
+  monthly_budget_suggest_applied: "ההצעות הוחלו — שמרו כדי לשמור אותן",
+  monthly_budget_suggest_empty: "אין צורך בהעברה — הפערים נראים מכוסים.",
+  monthly_budget_suggest_remove: "הסר",
+  monthly_budget_suggest_amount: "תקציב חדש",
+  monthly_budget_suggest_kept: "{count} שינויים מוכנים להחלה",
+  monthly_budget_below_recurring: "מתחת לקבוע — העלו את התקציב לכיסוי ההוצאות הקבועות",
+  monthly_budget_tx_count: "{count} עסקאות",
+  monthly_budget_no_transactions: "אין עסקאות בקטגוריה זו בחודש זה.",
 
   settings_title: "הגדרות",
   settings_preferences: "העדפות",

@@ -30,6 +30,15 @@ export interface CategoryLimit {
   monthlyLimit: number;
 }
 
+/** Per-month category budget amounts. Doc id = YYYY-MM. */
+export interface MonthlyBudget {
+  monthKey: string;
+  /** categoryId → budget amount for that month */
+  amounts: Record<string, number>;
+  updatedAt?: Timestamp;
+  createdAt?: Timestamp;
+}
+
 export type TransactionSource = "manual" | "csv" | "max";
 
 export interface Transaction {

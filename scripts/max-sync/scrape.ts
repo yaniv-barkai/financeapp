@@ -1,6 +1,11 @@
 import { createScraper, CompanyTypes } from "@sergienko4/israeli-bank-scrapers";
 import type { ScrapedRow } from "./import.js";
-import { buildSourceKey, keepEventLoopAlive, normalizeMerchant } from "./utils.js";
+import {
+  buildSourceKey,
+  keepEventLoopAlive,
+  normalizeMerchant,
+  toIsraelMidnight,
+} from "./utils.js";
 
 interface ScraperTransaction {
   description?: string;
@@ -69,12 +74,14 @@ export async function scrapeMaxTransactions(
         continue;
       }
 
+      // Normalize so UTC-midnight vs Israel-midnight scrapes share one day + sourceKey.
+      const canonicalDate = toIsraelMidnight(date);
       rows.push({
-        date,
+        date: canonicalDate,
         amount,
         merchantDisplay,
         merchantNormalized,
-        sourceKey: buildSourceKey(date, amount, merchantNormalized),
+        sourceKey: buildSourceKey(canonicalDate, amount, merchantNormalized),
       });
     }
   }

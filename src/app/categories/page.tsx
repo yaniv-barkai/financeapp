@@ -26,16 +26,13 @@ import {
   addCategory,
   updateCategory,
   deleteCategory,
-  setCategoryLimit,
-  removeCategoryLimit,
-  getAllLimitDetails,
   getCategories,
   updateCategoryOrders,
 } from "@/lib/firestore/categories";
 import { getRecurring, toMonthlyRecurringAmount } from "@/lib/firestore/recurring";
 import { addTag, updateTag, deleteTag, getTags } from "@/lib/firestore/tags";
 import { getTransactionsByMonth } from "@/lib/firestore/transactions";
-import { BudgetPeriod, Category, CategoryLimit, Recurring } from "@/lib/types";
+import { Category, Recurring } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +48,7 @@ import {
 import { cn, formatCurrency, getCategoryDisplayName, translateHeToEn, getMonthRange } from "@/lib/utils";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
 import { EmojiPickerButton } from "@/components/ui/EmojiPickerButton";
+import { MonthlyBudgetEditor } from "@/components/budget/MonthlyBudgetEditor";
 
 
 const CAT_COLORS = [
@@ -99,15 +97,11 @@ export default function CategoriesPage() {
   const isRtl = locale === "he";
 
   const confirm = useConfirm();
-  const [limits, setLimits] = useState<Record<string, CategoryLimit>>({});
   const [recurrings, setRecurrings] = useState<Recurring[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editCat, setEditCat] = useState<Category | null>(null);
   const [form, setForm] = useState<CategoryFormData>({ name: "", nameEn: "", icon: "📦", color: CAT_COLORS[0] });
   const [formType, setFormType] = useState<"expense" | "income">("expense");
-  const [showLimitDialog, setShowLimitDialog] = useState<Category | null>(null);
-  const [limitValue, setLimitValue] = useState("");
-  const [limitPeriod, setLimitPeriod] = useState<BudgetPeriod>("monthly");
   const [saving, setSaving] = useState(false);
   const [translating, setTranslating] = useState(false);
 
@@ -138,13 +132,9 @@ export default function CategoriesPage() {
     await updateCategoryOrders(user.uid, activeBookId, reordered);
   };
 
-  const loadLimits = async () => {
+  const loadRecurrings = async () => {
     if (!user || !activeBookId) return;
-    const [lims, recs] = await Promise.all([
-      getAllLimitDetails(user.uid, activeBookId, categories),
-      getRecurring(user.uid, activeBookId),
-    ]);
-    setLimits(lims);
+    const recs = await getRecurring(user.uid, activeBookId);
     setRecurrings(recs.filter((r) => r.active));
   };
 
@@ -166,7 +156,7 @@ export default function CategoriesPage() {
   };
 
   useEffect(() => {
-    loadLimits();
+    loadRecurrings();
   }, [user, activeBookId, categories.length]);
 
   const monthlyIncome = useMemo(
@@ -272,23 +262,6 @@ export default function CategoriesPage() {
     await refreshCats();
   };
 
-  const handleSetLimit = async () => {
-    if (!user || !activeBookId || !showLimitDialog) return;
-    setSaving(true);
-    try {
-      const val = parseFloat(limitValue);
-      if (!isNaN(val) && val > 0) {
-        await setCategoryLimit(user.uid, activeBookId, showLimitDialog.id, val, limitPeriod);
-      } else {
-        await removeCategoryLimit(user.uid, activeBookId, showLimitDialog.id);
-      }
-      await loadLimits();
-      setShowLimitDialog(null);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   // ─── Tag handlers ──────────────────────────────────────────────────────────
 
   const openNewTag = () => {
@@ -362,21 +335,6 @@ export default function CategoriesPage() {
                       <span className="font-medium text-sm">{getCategoryDisplayName(cat, locale)}</span>
                       {cat.pinned && <Pin className="h-3 w-3 text-primary" />}
                     </div>
-                    {limits[cat.id] !== undefined && (() => {
-                      const lim = limits[cat.id];
-                      const suffix = lim.budgetPeriod === "yearly" ? t.categories_limit_per_year : t.categories_limit_per_month;
-                      return (
-                        <span className="text-xs text-muted-foreground">
-                          {t.categories_limit_prefix}{" "}
-                          <span dir="ltr" className="tabular-nums inline-block">
-                            {formatCurrency(lim.budgetAmount, currency)}{suffix}
-                          </span>
-                          {lim.budgetPeriod === "yearly" && (
-                            <span className="ms-1 opacity-70" dir="ltr">({formatCurrency(lim.monthlyLimit, currency)}/mo)</span>
-                          )}
-                        </span>
-                      );
-                    })()}
                   </div>
                   <div className="flex gap-1">
                     <Button
@@ -387,19 +345,6 @@ export default function CategoriesPage() {
                       onClick={() => handleTogglePin(cat)}
                     >
                       {cat.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 text-xs"
-                      onClick={() => {
-                        setShowLimitDialog(cat);
-                        const lim = limits[cat.id];
-                        setLimitValue(lim ? String(lim.budgetAmount) : "");
-                        setLimitPeriod(lim?.budgetPeriod ?? "monthly");
-                      }}
-                    >
-                      {t.categories_limit}
                     </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(cat)}>
                       <Pencil className="h-3.5 w-3.5" />
@@ -426,8 +371,14 @@ export default function CategoriesPage() {
     <div className="space-y-5" dir={isRtl ? "rtl" : "ltr"}>
       <h1 className={cn("text-2xl font-bold", isRtl && "text-end")}>{t.nav_categories}</h1>
 
+      <MonthlyBudgetEditor />
+
       {/* Net income summary */}
-      <Card>
+      <Card
+        className={cn(
+          monthlyNet < 0 && "border-red-200 bg-red-50/60 dark:border-red-900/50 dark:bg-red-950/25"
+        )}
+      >
         <CardHeader className="pb-2">
           <CardTitle className={cn("text-sm text-muted-foreground font-normal", isRtl && "text-end")}>{t.budget_summary_subtitle}</CardTitle>
         </CardHeader>
@@ -471,7 +422,7 @@ export default function CategoriesPage() {
         </TabsList>
 
         <TabsContent value="expense" className="mt-4 space-y-3">
-          <div className={cn("flex", isRtl && "justify-end")}>
+          <div className="flex justify-start">
             <Button size="sm" onClick={() => openNew("expense")} className="gap-2">
               <Plus className="h-4 w-4" /> {t.categories_add_expense}
             </Button>
@@ -480,7 +431,7 @@ export default function CategoriesPage() {
         </TabsContent>
 
         <TabsContent value="income" className="mt-4 space-y-3">
-          <div className={cn("flex", isRtl && "justify-end")}>
+          <div className="flex justify-start">
             <Button size="sm" onClick={() => openNew("income")} className="gap-2">
               <Plus className="h-4 w-4" /> {t.categories_add_income}
             </Button>
@@ -489,7 +440,7 @@ export default function CategoriesPage() {
         </TabsContent>
 
         <TabsContent value="tags" className="mt-4 space-y-3">
-          <div className={cn("flex", isRtl && "justify-end")}>
+          <div className="flex justify-start">
             <Button size="sm" onClick={openNewTag} className="gap-2">
               <Plus className="h-4 w-4" /> {t.tags_add}
             </Button>
@@ -612,57 +563,6 @@ export default function CategoriesPage() {
             <Button onClick={handleSave} disabled={!form.name.trim() || saving}>
               {saving ? t.categories_saving : editCat ? t.categories_save : t.categories_create}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Budget limit dialog */}
-      <Dialog open={!!showLimitDialog} onOpenChange={(o) => !o && setShowLimitDialog(null)}>
-        <DialogContent className="sm:max-w-xs">
-          <DialogHeader>
-            <DialogTitle>{t.categories_limit_dialog_prefix} {showLimitDialog?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>{t.categories_limit_period}</Label>
-              <div className="flex rounded-lg border overflow-hidden">
-                <button
-                  type="button"
-                  className={`flex-1 py-1.5 text-sm transition-colors ${limitPeriod === "monthly" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-                  onClick={() => setLimitPeriod("monthly")}
-                >
-                  {t.categories_limit_period_monthly}
-                </button>
-                <button
-                  type="button"
-                  className={`flex-1 py-1.5 text-sm transition-colors ${limitPeriod === "yearly" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-                  onClick={() => setLimitPeriod("yearly")}
-                >
-                  {t.categories_limit_period_yearly}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t.categories_limit_input_label} ({currency})</Label>
-              <Input
-                type="number"
-                min="0"
-                step="10"
-                placeholder={t.categories_limit_placeholder}
-                value={limitValue}
-                onChange={(e) => setLimitValue(e.target.value)}
-              />
-              {limitPeriod === "yearly" && limitValue && !isNaN(parseFloat(limitValue)) && parseFloat(limitValue) > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {t.categories_limit_yearly_equiv.replace("{amount}", formatCurrency(parseFloat(limitValue) / 12, currency))}
-                </p>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">{t.categories_limit_hint}</p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowLimitDialog(null)}>{t.categories_cancel}</Button>
-            <Button onClick={handleSetLimit} disabled={saving}>{t.categories_save}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

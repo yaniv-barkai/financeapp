@@ -56,6 +56,17 @@ export function getPrevMonthKey(monthKey: string): string {
   return getMonthKey(new Date(year, month - 2, 1));
 }
 
+export function getNextMonthKey(monthKey: string): string {
+  const [year, month] = monthKey.split("-").map(Number);
+  return getMonthKey(new Date(year, month, 1));
+}
+
+/** Days remaining in the calendar month of `date` (0 = last day). */
+export function daysUntilMonthEnd(date: Date = new Date()): number {
+  const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  return lastDay - date.getDate();
+}
+
 export function getCategoryDisplayName(
   cat: { name: string; nameEn?: string },
   locale: string

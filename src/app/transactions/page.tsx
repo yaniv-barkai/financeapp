@@ -13,13 +13,15 @@ import {
   transferTransaction,
   updateTransaction,
 } from "@/lib/firestore/transactions";
+import { getUserSettings } from "@/lib/firestore/settings";
 import { upsertMerchant } from "@/lib/firestore/merchants";
 import { addRecurring, skipRecurringPeriod } from "@/lib/firestore/recurring";
-import { Transaction, RecurringCadence } from "@/lib/types";
-import { formatCurrency, formatDate, getMonthRange, getCategoryDisplayName } from "@/lib/utils";
+import { Transaction, RecurringCadence, MaxSyncSettings } from "@/lib/types";
+import { formatCurrency, getMonthRange, getCategoryDisplayName } from "@/lib/utils";
 import { MonthSwitcher } from "@/components/dashboard/MonthSwitcher";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { CategoryPicker } from "@/components/transactions/CategoryPicker";
+import { TransactionCategoryControls } from "@/components/transactions/TransactionCategoryControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -46,72 +48,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
 
-/** Icon + label that open one shared category picker (good tap targets on mobile). */
-function TransactionCategoryControls({
-  tx,
-  catIcon,
-  catLabel,
-  onChange,
-  tagsSlot,
-  note,
-}: {
-  tx: Transaction;
-  catIcon: string;
-  catLabel: string;
-  onChange: (categoryId: string) => void;
-  tagsSlot?: React.ReactNode;
-  note?: string;
-}) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="text-xl w-10 h-10 flex-shrink-0 inline-flex items-center justify-center rounded-md hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label={catLabel}
-      >
-        {catIcon}
-      </button>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">
-          {tx.merchantDisplay || catLabel}
-        </p>
-        <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="rounded px-1 py-0.5 -mx-1 min-h-[28px] inline-flex items-center hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {catLabel}
-          </button>
-          <span>·</span>
-          <span>{formatDate(tx.date.toDate())}</span>
-          {tx.recurringId && (
-            <span className="inline-flex items-center gap-0.5 ms-0.5">
-              · <RefreshCw className="h-3 w-3 inline" />
-            </span>
-          )}
-        </p>
-        {tagsSlot}
-        {note && <p className="text-xs text-muted-foreground italic truncate">{note}</p>}
-      </div>
-      <CategoryPicker
-        value={tx.categoryId}
-        onChange={(id) => {
-          onChange(id);
-          setOpen(false);
-        }}
-        typeFilter={tx.type}
-        open={open}
-        onOpenChange={setOpen}
-        hideTrigger
-      />
-    </>
-  );
-}
-
 export default function TransactionsPage() {
   const { user, loading } = useRequireAuth();
   const { activeBookId, categories, tags, currency, activeMonth, books, txVersion, bumpTxVersion, setMerchants } = useAppStore();
@@ -130,6 +66,7 @@ export default function TransactionsPage() {
   const [convertTx, setConvertTx] = useState<Transaction | null>(null);
   const [convertCadence, setConvertCadence] = useState<RecurringCadence>("monthly");
   const [converting, setConverting] = useState(false);
+  const [maxSync, setMaxSync] = useState<MaxSyncSettings | null>(null);
 
   const { start, end } = getMonthRange(activeMonth);
 
@@ -142,6 +79,19 @@ export default function TransactionsPage() {
   useEffect(() => {
     loadData();
   }, [user, activeBookId, activeMonth, txVersion]);
+
+  useEffect(() => {
+    if (!user) return;
+    getUserSettings(user.uid).then((s) => {
+      if (s?.maxSync) setMaxSync(s.maxSync);
+    });
+  }, [user]);
+
+  const lastUpdatedLabel = (() => {
+    const ts = maxSync?.lastSyncAt as { toDate?: () => Date } | undefined;
+    if (!ts?.toDate) return t.transactions_last_updated_never;
+    return ts.toDate().toLocaleString(locale === "he" ? "he-IL" : "en-IL");
+  })();
 
   const filtered = useMemo(() => {
     return transactions.filter((tx) => {
@@ -249,7 +199,12 @@ export default function TransactionsPage() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">{t.transactions_title}</h1>
+        <div>
+          <h1 className="text-2xl font-bold">{t.transactions_title}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {t.transactions_last_updated}: {lastUpdatedLabel}
+          </p>
+        </div>
         <MonthSwitcher />
       </div>
 

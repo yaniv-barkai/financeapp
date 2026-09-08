@@ -1,6 +1,6 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { getDb } from "./firebase.js";
-import { normalizeMerchant } from "./utils.js";
+import { buildSourceKey, normalizeMerchant } from "./utils.js";
 
 export interface ScrapedRow {
   date: Date;
@@ -53,6 +53,14 @@ export async function loadExistingSourceKeys(
   for (const doc of snap.docs) {
     const data = doc.data();
     if (data.sourceKey) keys.add(data.sourceKey as string);
+    // Rebuild with Israel calendar day so legacy UTC-day keys still dedup
+    // against new scrapes (same local day, different UTC midnight shapes).
+    const date = data.date?.toDate?.() as Date | undefined;
+    const amount = data.amount as number | undefined;
+    const merchant = data.merchantNormalized as string | undefined;
+    if (date && amount != null && merchant) {
+      keys.add(buildSourceKey(date, amount, merchant));
+    }
   }
   return keys;
 }
