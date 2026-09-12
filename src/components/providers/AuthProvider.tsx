@@ -6,8 +6,6 @@ import {
   onAuthStateChanged,
   signOut,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  updateProfile,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { getUserSettings, initUserSettings } from "@/lib/firestore/settings";
@@ -19,30 +17,47 @@ import { useAppStore, setStoreUserId, clearUserSession } from "@/lib/store";
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
+  isAdmin: boolean;
+  accountBlocked: boolean;
   signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (email: string, password: string, displayName: string) => Promise<void>;
   signOutUser: () => Promise<void>;
+  refreshClaims: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   loading: true,
+  isAdmin: false,
+  accountBlocked: false,
   signInWithEmail: async () => {},
-  signUpWithEmail: async () => {},
   signOutUser: async () => {},
+  refreshClaims: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [accountBlocked, setAccountBlocked] = useState(false);
   const { setBooks, setCategories, setMerchants, setActiveBookId, setCurrency, activeBookId } =
     useAppStore();
+
+  const refreshClaims = async () => {
+    const current = auth.currentUser;
+    if (!current) {
+      setIsAdmin(false);
+      return;
+    }
+    const tokenResult = await current.getIdTokenResult(true);
+    setIsAdmin(tokenResult.claims.admin === true);
+  };
 
   useEffect(() => {
     const loadUserData = async (u: User, attempt = 0): Promise<void> => {
       try {
         const settings = await getUserSettings(u.uid);
         const books = await getBooks(u.uid);
+        setAccountBlocked(false);
 
         if (books.length === 0) {
           const bookId = await seedDefaultBook(u.uid);
@@ -64,6 +79,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setMerchants(merchants);
         }
       } catch (err: unknown) {
+        const code = (err as { code?: string }).code ?? "";
+        const message = err instanceof Error ? err.message : "";
+        const isPermission =
+          code === "permission-denied" ||
+          message.includes("permission-denied") ||
+          message.includes("Missing or insufficient permissions");
+        if (isPermission) {
+          setAccountBlocked(true);
+          return;
+        }
         const isOffline =
           err instanceof Error && err.message.includes("client is offline");
         if (isOffline && attempt < 4) {
@@ -80,6 +105,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (u) {
         clearUserSession();
         await useAppStore.persist.rehydrate();
+        const tokenResult = await u.getIdTokenResult();
+        setIsAdmin(tokenResult.claims.admin === true);
+      } else {
+        setIsAdmin(false);
+        setAccountBlocked(false);
       }
 
       setUser(u);
@@ -97,19 +127,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
-  const signUpWithEmail = async (email: string, password: string, displayName: string) => {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    if (displayName.trim()) {
-      await updateProfile(cred.user, { displayName: displayName.trim() });
-    }
-  };
-
   const signOutUser = async () => {
     await signOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithEmail, signUpWithEmail, signOutUser }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        isAdmin,
+        accountBlocked,
+        signInWithEmail,
+        signOutUser,
+        refreshClaims,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

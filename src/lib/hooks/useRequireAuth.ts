@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 
 export function useRequireAuth() {
-  const { user, loading } = useAuth();
+  const { user, loading, accountBlocked, signOutUser } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -14,7 +14,15 @@ export function useRequireAuth() {
         router.replace("/login");
       });
     }
-  }, [user, loading]);
+  }, [user, loading, router]);
 
-  return { user, loading };
+  useEffect(() => {
+    if (!loading && user && accountBlocked) {
+      startTransition(() => {
+        router.replace("/login");
+      });
+    }
+  }, [user, loading, accountBlocked, router]);
+
+  return { user, loading: loading || Boolean(user && accountBlocked), accountBlocked, signOutUser };
 }

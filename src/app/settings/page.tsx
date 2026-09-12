@@ -43,7 +43,7 @@ const BOOK_COLORS = [
 
 export default function SettingsPage() {
   const { loading } = useRequireAuth();
-  const { user, signOutUser } = useAuth();
+  const { user, signOutUser, isAdmin } = useAuth();
   const { books, setBooks, activeBookId, setActiveBookId, currency, setCurrency, setMerchants } = useAppStore();
   const { t, locale, setLocale } = useLocale();
 
@@ -253,7 +253,8 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* MAX Sync */}
+      {/* MAX Sync — owner/admin only */}
+      {isAdmin && (
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
@@ -315,6 +316,7 @@ export default function SettingsPage() {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* Budget alerts */}
       <Card>

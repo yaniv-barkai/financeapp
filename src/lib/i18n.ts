@@ -14,6 +14,7 @@ export interface Translations {
   nav_recurring: string;
   nav_tasks: string;
   nav_settings: string;
+  nav_admin: string;
   nav_sign_out: string;
   nav_search_placeholder: string;
   nav_brand: string;
@@ -203,31 +204,67 @@ export interface Translations {
   // Login page
   login_title: string;
   login_sign_in_description: string;
-  login_sign_up_description: string;
-  login_google: string;
-  login_or: string;
-  login_name: string;
   login_email: string;
   login_password: string;
-  login_name_placeholder: string;
   login_email_placeholder: string;
-  login_password_signup_placeholder: string;
   login_password_signin_placeholder: string;
   login_signing_in: string;
-  login_creating: string;
   login_sign_in: string;
-  login_create_account: string;
-  login_no_account: string;
-  login_create_one: string;
-  login_have_account: string;
-  login_sign_in_link: string;
+  login_account_blocked: string;
+  login_sign_out_blocked: string;
   login_error_invalid_email: string;
   login_error_wrong_password: string;
-  login_error_email_exists: string;
-  login_error_weak_password: string;
+  login_error_disabled: string;
   login_error_too_many_requests: string;
   login_error_popup_closed: string;
   login_error_generic: string;
+
+  // Admin
+  admin_title: string;
+  admin_privacy_note: string;
+  admin_accounts: string;
+  admin_accounts_description: string;
+  admin_loading: string;
+  admin_empty: string;
+  admin_refresh: string;
+  admin_create: string;
+  admin_create_title: string;
+  admin_creating: string;
+  admin_created: string;
+  admin_create_hint: string;
+  admin_email: string;
+  admin_email_placeholder: string;
+  admin_name: string;
+  admin_name_placeholder: string;
+  admin_cancel: string;
+  admin_you: string;
+  admin_status_active: string;
+  admin_status_disabled: string;
+  admin_status_unprovisioned: string;
+  admin_last_login: string;
+  admin_never_logged_in: string;
+  admin_enable: string;
+  admin_disable: string;
+  admin_enable_title: string;
+  admin_disable_title: string;
+  admin_enable_confirm: string;
+  admin_disable_confirm: string;
+  admin_enabled: string;
+  admin_disabled: string;
+  admin_reset_password: string;
+  admin_reset_ready: string;
+  admin_reset_link_title: string;
+  admin_reset_link_description: string;
+  admin_copy_link: string;
+  admin_link_copied: string;
+  admin_delete: string;
+  admin_delete_title: string;
+  admin_delete_confirm: string;
+  admin_delete_type_email: string;
+  admin_delete_email_mismatch: string;
+  admin_deleting: string;
+  admin_deleted: string;
+  admin_error_generic: string;
 
   // Import CSV
   import_title: string;
@@ -454,6 +491,7 @@ const en: Translations = {
   nav_recurring: "Recurring",
   nav_tasks: "Tasks",
   nav_settings: "Settings",
+  nav_admin: "Admin",
   nav_sign_out: "Sign out",
   nav_search_placeholder: "Search…",
   nav_brand: "FinanceApp",
@@ -633,31 +671,70 @@ const en: Translations = {
 
   login_title: "FinanceApp",
   login_sign_in_description: "Sign in to your account",
-  login_sign_up_description: "Create your account",
-  login_google: "Continue with Google",
-  login_or: "or",
-  login_name: "Name",
   login_email: "Email",
   login_password: "Password",
-  login_name_placeholder: "Your name",
   login_email_placeholder: "you@example.com",
-  login_password_signup_placeholder: "At least 6 characters",
   login_password_signin_placeholder: "••••••••",
   login_signing_in: "Signing in…",
-  login_creating: "Creating account…",
   login_sign_in: "Sign in",
-  login_create_account: "Create account",
-  login_no_account: "No account?",
-  login_create_one: "Create one",
-  login_have_account: "Already have an account?",
-  login_sign_in_link: "Sign in",
+  login_account_blocked:
+    "This account is not provisioned or has been disabled. Contact the admin.",
+  login_sign_out_blocked: "Sign out",
   login_error_invalid_email: "Invalid email address.",
   login_error_wrong_password: "Incorrect email or password.",
-  login_error_email_exists: "An account with this email already exists.",
-  login_error_weak_password: "Password must be at least 6 characters.",
+  login_error_disabled: "This account has been disabled.",
   login_error_too_many_requests: "Too many attempts — please try again later.",
   login_error_popup_closed: "Sign-in popup was closed. Please try again.",
   login_error_generic: "Something went wrong. Please try again.",
+
+  admin_title: "Account management",
+  admin_privacy_note:
+    "Admins can create and manage accounts, but cannot view another account’s financial data (transactions, budgets, books, or merchants).",
+  admin_accounts: "Accounts",
+  admin_accounts_description: "Email, name, status, and last login only.",
+  admin_loading: "Loading…",
+  admin_empty: "No accounts found.",
+  admin_refresh: "Refresh",
+  admin_create: "Create account",
+  admin_create_title: "Create account",
+  admin_creating: "Creating…",
+  admin_created: "Account created",
+  admin_create_hint: "A one-time password reset link will be shown so they can set their password.",
+  admin_email: "Email",
+  admin_email_placeholder: "user@example.com",
+  admin_name: "Name",
+  admin_name_placeholder: "Optional display name",
+  admin_cancel: "Cancel",
+  admin_you: "you",
+  admin_status_active: "Active",
+  admin_status_disabled: "Disabled",
+  admin_status_unprovisioned: "Unprovisioned",
+  admin_last_login: "Last login",
+  admin_never_logged_in: "Never signed in",
+  admin_enable: "Enable",
+  admin_disable: "Disable",
+  admin_enable_title: "Enable account",
+  admin_disable_title: "Disable account",
+  admin_enable_confirm: "Enable {email}?",
+  admin_disable_confirm: "Disable {email}? They will not be able to sign in or access their data.",
+  admin_enabled: "Account enabled",
+  admin_disabled: "Account disabled",
+  admin_reset_password: "Reset password",
+  admin_reset_ready: "Password reset link ready",
+  admin_reset_link_title: "Password reset link",
+  admin_reset_link_description:
+    "Copy and send this link privately. It is shown once and is not stored.",
+  admin_copy_link: "Copy link",
+  admin_link_copied: "Link copied",
+  admin_delete: "Delete",
+  admin_delete_title: "Delete account",
+  admin_delete_confirm:
+    "Permanently delete {email} and all of their finance data? This cannot be undone.",
+  admin_delete_type_email: "Type the account email to confirm",
+  admin_delete_email_mismatch: "Email does not match",
+  admin_deleting: "Deleting…",
+  admin_deleted: "Account deleted",
+  admin_error_generic: "Something went wrong",
 
   import_title: "Import CSV",
   import_step_upload: "upload",
@@ -876,6 +953,7 @@ const he: Translations = {
   nav_recurring: "תשלומים קבועים",
   nav_tasks: "משימות",
   nav_settings: "הגדרות",
+  nav_admin: "ניהול",
   nav_sign_out: "התנתק",
   nav_search_placeholder: "חיפוש…",
   nav_brand: "FinanceApp",
@@ -1055,31 +1133,70 @@ const he: Translations = {
 
   login_title: "FinanceApp",
   login_sign_in_description: "התחבר לחשבונך",
-  login_sign_up_description: "צור את חשבונך",
-  login_google: "המשך עם Google",
-  login_or: "או",
-  login_name: "שם",
   login_email: "אימייל",
   login_password: "סיסמה",
-  login_name_placeholder: "שמך",
   login_email_placeholder: "you@example.com",
-  login_password_signup_placeholder: "לפחות 6 תווים",
   login_password_signin_placeholder: "••••••••",
   login_signing_in: "מתחבר…",
-  login_creating: "יוצר חשבון…",
   login_sign_in: "התחבר",
-  login_create_account: "צור חשבון",
-  login_no_account: "אין חשבון?",
-  login_create_one: "צור חשבון",
-  login_have_account: "יש לך כבר חשבון?",
-  login_sign_in_link: "התחבר",
+  login_account_blocked:
+    "החשבון אינו מופעל או שנוטרל. פנה למנהל המערכת.",
+  login_sign_out_blocked: "התנתק",
   login_error_invalid_email: "כתובת אימייל לא תקינה.",
   login_error_wrong_password: "אימייל או סיסמה שגויים.",
-  login_error_email_exists: "חשבון עם אימייל זה כבר קיים.",
-  login_error_weak_password: "הסיסמה חייבת להכיל לפחות 6 תווים.",
+  login_error_disabled: "החשבון נוטרל.",
   login_error_too_many_requests: "יותר מדי ניסיונות — נסה שוב מאוחר יותר.",
   login_error_popup_closed: "חלון הכניסה נסגר. נסה שוב.",
   login_error_generic: "משהו השתבש. נסה שוב.",
+
+  admin_title: "ניהול חשבונות",
+  admin_privacy_note:
+    "מנהלים יכולים ליצור ולנהל חשבונות, אך אינם יכולים לצפות במידע הפיננסי של חשבון אחר (עסקאות, תקציבים, ספרים או ספקים).",
+  admin_accounts: "חשבונות",
+  admin_accounts_description: "אימייל, שם, סטטוס והתחברות אחרונה בלבד.",
+  admin_loading: "טוען…",
+  admin_empty: "לא נמצאו חשבונות.",
+  admin_refresh: "רענן",
+  admin_create: "צור חשבון",
+  admin_create_title: "יצירת חשבון",
+  admin_creating: "יוצר…",
+  admin_created: "החשבון נוצר",
+  admin_create_hint: "יוצג קישור חד-פעמי לאיפוס סיסמה כדי שהמשתמש יוכל להגדיר סיסמה.",
+  admin_email: "אימייל",
+  admin_email_placeholder: "user@example.com",
+  admin_name: "שם",
+  admin_name_placeholder: "שם תצוגה (אופציונלי)",
+  admin_cancel: "ביטול",
+  admin_you: "אתה",
+  admin_status_active: "פעיל",
+  admin_status_disabled: "מנוטרל",
+  admin_status_unprovisioned: "לא מופעל",
+  admin_last_login: "התחברות אחרונה",
+  admin_never_logged_in: "מעולם לא התחבר",
+  admin_enable: "הפעל",
+  admin_disable: "נטרל",
+  admin_enable_title: "הפעלת חשבון",
+  admin_disable_title: "נטרול חשבון",
+  admin_enable_confirm: "להפעיל את {email}?",
+  admin_disable_confirm: "לנטרל את {email}? לא יוכל להתחבר או לגשת לנתונים.",
+  admin_enabled: "החשבון הופעל",
+  admin_disabled: "החשבון נוטרל",
+  admin_reset_password: "איפוס סיסמה",
+  admin_reset_ready: "קישור לאיפוס סיסמה מוכן",
+  admin_reset_link_title: "קישור לאיפוס סיסמה",
+  admin_reset_link_description:
+    "העתק ושלח את הקישור באופן פרטי. הוא מוצג פעם אחת ואינו נשמר.",
+  admin_copy_link: "העתק קישור",
+  admin_link_copied: "הקישור הועתק",
+  admin_delete: "מחק",
+  admin_delete_title: "מחיקת חשבון",
+  admin_delete_confirm:
+    "למחוק לצמיתות את {email} ואת כל נתוני הכספים שלו? לא ניתן לבטל.",
+  admin_delete_type_email: "הקלד את האימייל לאישור",
+  admin_delete_email_mismatch: "האימייל אינו תואם",
+  admin_deleting: "מוחק…",
+  admin_deleted: "החשבון נמחק",
+  admin_error_generic: "משהו השתבש",
 
   import_title: "ייבוא CSV",
   import_step_upload: "העלאה",

@@ -720,11 +720,6 @@ export async function runBudgetAlertsForUser(uid: string): Promise<number> {
 }
 
 export async function runBudgetAlertsForAllConfiguredUsers(): Promise<number> {
-  const targetUid = process.env.SYNC_USER_UID;
-  if (targetUid) {
-    return runBudgetAlertsForUser(targetUid);
-  }
-
   const snap = await getAdminFirestore().collection("users").get();
   let total = 0;
   for (const doc of snap.docs) {

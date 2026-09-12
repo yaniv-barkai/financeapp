@@ -1,12 +1,25 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Each user can only access their own subtree under users/{uid}/...
+    function isActiveOwner(userId) {
+      return request.auth != null
+        && request.auth.uid == userId
+        && exists(/databases/$(database)/documents/accountRegistry/$(userId))
+        && get(/databases/$(database)/documents/accountRegistry/$(userId)).data.status == 'active';
+    }
+
+    // Provisioning registry — Admin SDK only for writes. Owner may read own status.
+    match /accountRegistry/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    // Each active user can only access their own subtree. No admin exception.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isActiveOwner(userId);
     }
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isActiveOwner(userId);
     }
 
     // Deny all other paths — no shared/global collections

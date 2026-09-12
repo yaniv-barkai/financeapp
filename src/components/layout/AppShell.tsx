@@ -11,6 +11,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLogin = pathname === "/login";
   const isImport = pathname === "/import";
+  const isAdmin = pathname === "/admin";
 
   if (isLogin) {
     return <>{children}</>;
@@ -24,13 +25,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div
           className={cn(
             "mx-auto p-4 sm:p-6",
-            isImport ? "max-w-none w-full" : "max-w-5xl"
+            isImport || isAdmin ? "max-w-none w-full" : "max-w-5xl"
           )}
         >
           {children}
         </div>
       </main>
-      <QuickAddFab />
+      {!isAdmin && <QuickAddFab />}
       <PwaInit />
     </div>
   );

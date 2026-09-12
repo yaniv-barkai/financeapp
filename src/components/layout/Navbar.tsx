@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -15,6 +15,7 @@ import {
   Wallet,
   PieChart,
   CheckSquare,
+  Shield,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useLocale } from "@/components/providers/LocaleProvider";
@@ -24,19 +25,25 @@ import { cn } from "@/lib/utils";
 
 export function Navbar() {
   const pathname = usePathname();
-  const { signOutUser, user } = useAuth();
+  const { signOutUser, user, isAdmin } = useAuth();
   const { t } = useLocale();
 
-  const NAV_ITEMS = [
-    { href: "/", label: t.nav_dashboard, icon: LayoutDashboard },
-    { href: "/transactions", label: t.nav_transactions, icon: ListOrdered },
-    { href: "/statistics", label: t.nav_statistics, icon: PieChart },
-    { href: "/import", label: t.nav_import_csv, icon: Upload },
-    { href: "/categories", label: t.nav_categories, icon: BarChart3 },
-    { href: "/recurring", label: t.nav_recurring, icon: RefreshCw },
-    { href: "/tasks", label: t.nav_tasks, icon: CheckSquare },
-    { href: "/settings", label: t.nav_settings, icon: Settings },
-  ];
+  const NAV_ITEMS = useMemo(() => {
+    const items = [
+      { href: "/", label: t.nav_dashboard, icon: LayoutDashboard },
+      { href: "/transactions", label: t.nav_transactions, icon: ListOrdered },
+      { href: "/statistics", label: t.nav_statistics, icon: PieChart },
+      { href: "/import", label: t.nav_import_csv, icon: Upload },
+      { href: "/categories", label: t.nav_categories, icon: BarChart3 },
+      { href: "/recurring", label: t.nav_recurring, icon: RefreshCw },
+      { href: "/tasks", label: t.nav_tasks, icon: CheckSquare },
+      { href: "/settings", label: t.nav_settings, icon: Settings },
+    ];
+    if (isAdmin) {
+      items.push({ href: "/admin", label: t.nav_admin, icon: Shield });
+    }
+    return items;
+  }, [t, isAdmin]);
 
   return (
     <>

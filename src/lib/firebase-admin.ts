@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { getApps, initializeApp, cert, applicationDefault, App } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
+import { getAuth, Auth } from "firebase-admin/auth";
 import { getFirestore, Firestore } from "firebase-admin/firestore";
 
 function resolveServiceAccountJson(): string | null {
@@ -40,12 +40,20 @@ function initAdminApp(): App {
   }
 }
 
+export function getAdminApp(): App {
+  return initAdminApp();
+}
+
 export function getAdminFirestore(): Firestore {
   initAdminApp();
   return getFirestore();
 }
 
-export async function verifyIdToken(token: string) {
+export function getAdminAuth(): Auth {
   initAdminApp();
-  return getAuth().verifyIdToken(token);
+  return getAuth();
+}
+
+export async function verifyIdToken(token: string) {
+  return getAdminAuth().verifyIdToken(token);
 }

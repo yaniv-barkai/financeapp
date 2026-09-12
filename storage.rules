@@ -1,8 +1,15 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    function isActiveOwner(userId) {
+      return request.auth != null
+        && request.auth.uid == userId
+        && firestore.exists(/databases/(default)/documents/accountRegistry/$(userId))
+        && firestore.get(/databases/(default)/documents/accountRegistry/$(userId)).data.status == 'active';
+    }
+
     match /users/{userId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isActiveOwner(userId);
     }
   }
 }
