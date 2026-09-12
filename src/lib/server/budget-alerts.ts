@@ -13,9 +13,13 @@ import {
   getNextMonthKey,
   getPrevMonthKey,
 } from "@/lib/utils";
+import {
+  buildGuideEmailDigest,
+  persistGuideEmailState,
+} from "@/lib/server/guide-alerts";
 
 const DEFAULT_THRESHOLDS = [80, 100];
-const UNSET_BUDGET_ALERT_DAYS = 5;
+const UNSET_BUDGET_ALERT_DAYS = 7;
 const UNSET_BUDGET_STATE_ID = "unset_next_month";
 
 function parseLimitDoc(data: Record<string, unknown>): number {
@@ -573,7 +577,7 @@ export async function runBudgetAlertsForUser(uid: string): Promise<number> {
 
   let emailsSent = 0;
 
-  // Reminder: next month budget not set (within last 5 days of month)
+  // Reminder: next month budget not set (within last 7 days of month)
   const daysLeft = daysUntilMonthEnd(new Date());
   if (to && daysLeft <= UNSET_BUDGET_ALERT_DAYS) {
     const nextSet = await isMonthlyBudgetSet(uid, bookId, nextMonthKey);
@@ -657,66 +661,85 @@ export async function runBudgetAlertsForUser(uid: string): Promise<number> {
   }).catch(() => {});
   // #endregion
 
-  if (!crossings.length) return emailsSent;
-  if (!to) return emailsSent;
+  const highestByCat = crossings.length
+    ? highestNewThresholdByCategory(crossings)
+    : ({} as Record<string, number>);
 
-  const newCrossingCatIds = new Set(crossings.map((c) => c.catId));
-  const highestByCat = highestNewThresholdByCategory(crossings);
-  const overCount = rows.filter((r) => r.pct >= 100).length;
-  const warnCount = rows.filter((r) => r.pct >= 80 && r.pct < 100).length;
+  if (crossings.length && to) {
+    const newCrossingCatIds = new Set(crossings.map((c) => c.catId));
+    const overCount = rows.filter((r) => r.pct >= 100).length;
+    const warnCount = rows.filter((r) => r.pct >= 80 && r.pct < 100).length;
 
-  const subject =
-    overCount > 0
-      ? `דוח תקציב: ${overCount} חריגה · ${warnCount} אזהרה (${formatMonthLabel(monthKey)})`
-      : `דוח תקציב: ${warnCount} אזהרות (${formatMonthLabel(monthKey)})`;
+    const subject =
+      overCount > 0
+        ? `דוח תקציב: ${overCount} חריגה · ${warnCount} אזהרה (${formatMonthLabel(monthKey)})`
+        : `דוח תקציב: ${warnCount} אזהרות (${formatMonthLabel(monthKey)})`;
 
-  const appUrl =
-    process.env.VERCEL_APP_URL?.replace(/\/$/, "") ||
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
-    undefined;
+    const appUrl =
+      process.env.VERCEL_APP_URL?.replace(/\/$/, "") ||
+      process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+      undefined;
 
-  const html = buildBudgetDigestHtml({
-    monthKey,
-    currency,
-    rows,
-    newCrossingCatIds,
-    appUrl,
-  });
+    const html = buildBudgetDigestHtml({
+      monthKey,
+      currency,
+      rows,
+      newCrossingCatIds,
+      appUrl,
+    });
 
-  // #region agent log
-  fetch("http://127.0.0.1:7319/ingest/3fe75c29-122c-4137-9135-f8c7230bc020", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "18ad6c" },
-    body: JSON.stringify({
-      sessionId: "18ad6c",
-      runId: process.env.DEBUG_RUN_ID ?? "pre-fix",
-      hypothesisId: "E",
-      location: "budget-alerts.ts:runBudgetAlertsForUser:digest",
-      message: "sending digest email",
-      data: {
-        subject,
-        rowCount: rows.length,
-        newCrossingCats: newCrossingCatIds.size,
-        overCount,
-        warnCount,
-        htmlLen: html.length,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
+    // #region agent log
+    fetch("http://127.0.0.1:7319/ingest/3fe75c29-122c-4137-9135-f8c7230bc020", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "18ad6c" },
+      body: JSON.stringify({
+        sessionId: "18ad6c",
+        runId: process.env.DEBUG_RUN_ID ?? "pre-fix",
+        hypothesisId: "E",
+        location: "budget-alerts.ts:runBudgetAlertsForUser:digest",
+        message: "sending digest email",
+        data: {
+          subject,
+          rowCount: rows.length,
+          newCrossingCats: newCrossingCatIds.size,
+          overCount,
+          warnCount,
+          htmlLen: html.length,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
 
-  await sendBudgetEmail(to, subject, html);
+    await sendBudgetEmail(to, subject, html);
 
-  if (!ignoreState) {
-    await Promise.all(
-      Object.entries(highestByCat).map(([catId, threshold]) =>
-        saveAlertState(uid, monthKey, catId, threshold)
-      )
-    );
+    if (!ignoreState) {
+      await Promise.all(
+        Object.entries(highestByCat).map(([catId, threshold]) =>
+          saveAlertState(uid, monthKey, catId, threshold)
+        )
+      );
+    }
+
+    emailsSent += 1;
   }
 
-  return emailsSent + 1;
+  // Guide digest (setup / weekly / mismatch) — same cron, separate combined email
+  const skipMismatch = new Set<string>();
+  for (const [catId, thr] of Object.entries({ ...alreadySent, ...highestByCat })) {
+    if (thr >= 100) skipMismatch.add(catId);
+  }
+  const guideMail = await buildGuideEmailDigest(uid, settings, {
+    ignoreState,
+    skipMismatchCatIds: skipMismatch,
+  });
+  if (guideMail && to) {
+    await sendBudgetEmail(to, guideMail.subject, guideMail.html);
+    await persistGuideEmailState(uid, guideMail.stateIds, ignoreState);
+    emailsSent += 1;
+  }
+
+  return emailsSent;
 }
 
 export async function runBudgetAlertsForAllConfiguredUsers(): Promise<number> {

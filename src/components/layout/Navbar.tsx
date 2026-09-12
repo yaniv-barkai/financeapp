@@ -20,6 +20,8 @@ import {
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { BookSwitcher } from "./BookSwitcher";
+import { GuideBell } from "@/components/guide/GuideBell";
+import { useGuideContext } from "@/components/providers/GuideProvider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +29,8 @@ export function Navbar() {
   const pathname = usePathname();
   const { signOutUser, user, isAdmin } = useAuth();
   const { t } = useLocale();
+  const { result } = useGuideContext();
+  const navDots = result?.navDots ?? {};
 
   const NAV_ITEMS = useMemo(() => {
     const items = [
@@ -45,6 +49,14 @@ export function Navbar() {
     return items;
   }, [t, isAdmin]);
 
+  const hasDot = (href: string) =>
+    href === "/categories" ||
+    href === "/import" ||
+    href === "/recurring" ||
+    href === "/tasks"
+      ? Boolean(navDots[href as keyof typeof navDots])
+      : false;
+
   return (
     <>
       {/* Top bar */}
@@ -59,6 +71,7 @@ export function Navbar() {
 
           <div className="ms-auto flex items-center gap-2">
             <GlobalSearchTrigger label={t.nav_search_placeholder} />
+            {user && <GuideBell />}
             {user && (
               <Button variant="ghost" size="icon" onClick={signOutUser} title={t.nav_sign_out}>
                 <LogOut className="h-4 w-4" />
@@ -76,13 +89,18 @@ export function Navbar() {
               key={href}
               href={href}
               className={cn(
-                "flex flex-col items-center gap-1 px-2 py-1 text-[10px] transition-colors",
+                "relative flex flex-col items-center gap-1 px-2 py-1 text-[10px] transition-colors",
                 pathname === href
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Icon className="h-5 w-5" />
+              <span className="relative">
+                <Icon className="h-5 w-5" />
+                {hasDot(href) && (
+                  <span className="absolute -top-0.5 -end-1 h-1.5 w-1.5 rounded-full bg-primary" />
+                )}
+              </span>
               {label}
             </Link>
           ))}
@@ -97,14 +115,17 @@ export function Navbar() {
               key={href}
               href={href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 pathname === href
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
               <Icon className="h-4 w-4" />
-              {label}
+              <span className="flex-1">{label}</span>
+              {hasDot(href) && (
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+              )}
             </Link>
           ))}
         </nav>

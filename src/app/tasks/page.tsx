@@ -40,6 +40,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
+import { useGuideContext } from "@/components/providers/GuideProvider";
+import { GuideNextStepCard } from "@/components/guide/GuideNextStepCard";
 import { toast } from "sonner";
 
 type StatusFilter = "open" | "done" | "all";
@@ -77,6 +79,7 @@ export default function TasksPage() {
   const { activeBookId, currency } = useAppStore();
   const { t } = useLocale();
   const confirm = useConfirm();
+  const { result: guideResult, snooze, refresh: refreshGuide } = useGuideContext();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -174,7 +177,8 @@ export default function TasksPage() {
     });
     if (!ok) return;
     await deleteTask(user.uid, activeBookId, task.id);
-    loadData();
+    await loadData();
+    refreshGuide();
   };
 
   const handleToggleStatus = async (task: Task) => {
@@ -182,7 +186,8 @@ export default function TasksPage() {
     const next: Task["status"] = task.status === "open" ? "done" : "open";
     await updateTask(user.uid, activeBookId, task.id, { status: next });
     toast.success(next === "done" ? t.tasks_mark_done : t.tasks_mark_open);
-    loadData();
+    await loadData();
+    refreshGuide();
   };
 
   const attachTx = (id: string) => {
@@ -238,6 +243,24 @@ export default function TasksPage() {
           <Plus className="h-4 w-4" /> {t.tasks_add}
         </Button>
       </div>
+
+      {guideResult && guideResult.allItems.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {t.guide_suggested}
+          </p>
+          <div className="space-y-2">
+            {guideResult.allItems.slice(0, 3).map((item) => (
+              <GuideNextStepCard
+                key={item.id}
+                item={item}
+                heading={item.kind === "setup" ? "next" : "attention"}
+                onSnooze={(g) => snooze(g.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       <Tabs
         value={statusFilter}

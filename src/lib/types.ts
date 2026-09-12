@@ -116,6 +116,8 @@ export interface AlertSettings {
   emailEnabled: boolean;
   alertEmail?: string;
   thresholds: number[];
+  /** When false, skip setup/weekly/mismatch guide emails. Default true. */
+  guideEmailEnabled?: boolean;
 }
 
 export interface UserSettings {
@@ -124,6 +126,40 @@ export interface UserSettings {
   createdAt: Timestamp;
   maxSync?: MaxSyncSettings;
   alertSettings?: AlertSettings;
+  /** Preferred UI/email locale; falls back to client localStorage when unset. */
+  locale?: "en" | "he";
+}
+
+/** Persisted guide preferences that cannot be derived from finance data. */
+export interface GuideState {
+  categoriesReviewedAt?: Timestamp;
+  /** Guide item id → snooze-until timestamp */
+  snoozedUntil?: Record<string, Timestamp>;
+  updatedAt?: Timestamp;
+}
+
+export type GuideItemId =
+  | "setup_categories"
+  | "setup_import"
+  | "setup_recurring"
+  | "setup_budget_current"
+  | "setup_budget_next"
+  | "habit_weekly_activity"
+  | "habit_budget_current"
+  | "habit_budget_next"
+  | "habit_budget_mismatch"
+  | "habit_overdue_tasks";
+
+export type GuideNavHref = "/categories" | "/import" | "/recurring" | "/tasks" | "/";
+
+export interface GuideItem {
+  id: GuideItemId;
+  kind: "setup" | "habit";
+  href: GuideNavHref;
+  severity: "info" | "warning";
+  /** Number of mismatch categories or overdue tasks when relevant */
+  count?: number;
+  categoryIds?: string[];
 }
 
 export interface AlertStateDoc {

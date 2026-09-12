@@ -42,6 +42,8 @@ import {
 } from "@/components/ui/select";
 import { addMonths, addWeeks, addYears } from "date-fns";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
+import { useGuideContext } from "@/components/providers/GuideProvider";
+import { GuideBanner } from "@/components/guide/GuideBanner";
 import { toast } from "sonner";
 
 function nextRunDate(cadence: Recurring["cadence"]): Date {
@@ -69,6 +71,7 @@ export default function RecurringPage() {
   const { user } = useAuth();
   const { activeBookId, categories, currency, activeMonth, bumpTxVersion } = useAppStore();
   const { t } = useLocale();
+  const { result: guideResult, refresh: refreshGuide } = useGuideContext();
 
   const confirm = useConfirm();
   const [recurrings, setRecurrings] = useState<Recurring[]>([]);
@@ -123,6 +126,7 @@ export default function RecurringPage() {
         await addRecurring(user.uid, activeBookId, data);
       }
       await loadData();
+      refreshGuide();
       setShowForm(false);
     } finally {
       setSaving(false);
@@ -139,13 +143,15 @@ export default function RecurringPage() {
     });
     if (!ok) return;
     await deleteRecurring(user.uid, activeBookId, r.id);
-    loadData();
+    await loadData();
+    refreshGuide();
   };
 
   const handleToggleActive = async (r: Recurring) => {
     if (!user || !activeBookId) return;
     await updateRecurring(user.uid, activeBookId, r.id, { active: !r.active });
-    loadData();
+    await loadData();
+    refreshGuide();
   };
 
   const handleAddToTransaction = async (r: Recurring) => {
@@ -197,6 +203,10 @@ export default function RecurringPage() {
           <Plus className="h-4 w-4" /> {t.recurring_add}
         </Button>
       </div>
+
+      {guideResult?.allItems.some((i) => i.id === "setup_recurring") && (
+        <GuideBanner message={t.guide_banner_recurring} />
+      )}
 
       <Card>
         <CardContent className="p-0 divide-y">

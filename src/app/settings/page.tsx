@@ -53,6 +53,7 @@ export default function SettingsPage() {
   const [rebuilding, setRebuilding] = useState(false);
   const [maxSync, setMaxSync] = useState<MaxSyncSettings | null>(null);
   const [alertEmailEnabled, setAlertEmailEnabled] = useState(true);
+  const [guideEmailEnabled, setGuideEmailEnabled] = useState(true);
   const [alertEmail, setAlertEmail] = useState("");
   const [alertsSaving, setAlertsSaving] = useState(false);
 
@@ -67,10 +68,14 @@ export default function SettingsPage() {
       if (s?.maxSync) setMaxSync(s.maxSync);
       if (s?.alertSettings) {
         setAlertEmailEnabled(s.alertSettings.emailEnabled !== false);
+        setGuideEmailEnabled(s.alertSettings.guideEmailEnabled !== false);
         setAlertEmail(s.alertSettings.alertEmail ?? "");
       }
+      if (s?.locale === "en" || s?.locale === "he") {
+        setLocale(s.locale);
+      }
     });
-  }, [user]);
+  }, [user, setLocale]);
 
   const handleSaveAlerts = async () => {
     if (!user) return;
@@ -78,6 +83,7 @@ export default function SettingsPage() {
     try {
       const alertSettings: AlertSettings = {
         emailEnabled: alertEmailEnabled,
+        guideEmailEnabled,
         thresholds: [80, 100],
         ...(alertEmail.trim() ? { alertEmail: alertEmail.trim() } : {}),
       };
@@ -86,6 +92,11 @@ export default function SettingsPage() {
     } finally {
       setAlertsSaving(false);
     }
+  };
+
+  const handleLocaleChange = async (next: "en" | "he") => {
+    setLocale(next);
+    if (user) await setUserSettings(user.uid, { locale: next });
   };
 
   const handleSaveMaxBook = async (bookId: string) => {
@@ -195,7 +206,7 @@ export default function SettingsPage() {
                 variant={locale === "en" ? "default" : "outline"}
                 size="sm"
                 className="gap-2"
-                onClick={() => setLocale("en")}
+                onClick={() => handleLocaleChange("en")}
               >
                 🇺🇸 English
               </Button>
@@ -203,7 +214,7 @@ export default function SettingsPage() {
                 variant={locale === "he" ? "default" : "outline"}
                 size="sm"
                 className="gap-2"
-                onClick={() => setLocale("he")}
+                onClick={() => handleLocaleChange("he")}
               >
                 🇮🇱 עברית
               </Button>
@@ -334,6 +345,15 @@ export default function SettingsPage() {
               onCheckedChange={(v) => setAlertEmailEnabled(v === true)}
             />
             <Label htmlFor="alert-email">{t.settings_alerts_email_enabled}</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="guide-email"
+              checked={guideEmailEnabled}
+              disabled={!alertEmailEnabled}
+              onCheckedChange={(v) => setGuideEmailEnabled(v === true)}
+            />
+            <Label htmlFor="guide-email">{t.settings_alerts_guide_email}</Label>
           </div>
           <div className="space-y-1.5">
             <Label>{t.settings_alerts_email_override}</Label>

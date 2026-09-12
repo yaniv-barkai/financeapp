@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { Plus, Pencil, Trash2, Pin, PinOff, TrendingUp, TrendingDown, Wallet, GripVertical, Tag } from "lucide-react";
+import { Plus, Pencil, Trash2, Pin, PinOff, TrendingUp, TrendingDown, Wallet, GripVertical, Tag, Check } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -49,6 +49,9 @@ import { cn, formatCurrency, getCategoryDisplayName, translateHeToEn, getMonthRa
 import { useConfirm } from "@/components/providers/ConfirmProvider";
 import { EmojiPickerButton } from "@/components/ui/EmojiPickerButton";
 import { MonthlyBudgetEditor } from "@/components/budget/MonthlyBudgetEditor";
+import { useGuideContext } from "@/components/providers/GuideProvider";
+import { GuideBanner } from "@/components/guide/GuideBanner";
+import { toast } from "sonner";
 
 
 const CAT_COLORS = [
@@ -95,6 +98,7 @@ export default function CategoriesPage() {
   const { activeBookId, categories, setCategories, tags, setTags, currency, activeMonth } = useAppStore();
   const { t, locale } = useLocale();
   const isRtl = locale === "he";
+  const { result: guideResult, confirmCategories, refresh: refreshGuide } = useGuideContext();
 
   const confirm = useConfirm();
   const [recurrings, setRecurrings] = useState<Recurring[]>([]);
@@ -237,6 +241,7 @@ export default function CategoriesPage() {
         });
       }
       await refreshCats();
+      refreshGuide();
       setShowForm(false);
     } finally {
       setSaving(false);
@@ -254,6 +259,7 @@ export default function CategoriesPage() {
     if (!ok) return;
     await deleteCategory(user.uid, activeBookId, cat.id);
     await refreshCats();
+    refreshGuide();
   };
 
   const handleTogglePin = async (cat: Category) => {
@@ -369,7 +375,42 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-5" dir={isRtl ? "rtl" : "ltr"}>
-      <h1 className={cn("text-2xl font-bold", isRtl && "text-end")}>{t.nav_categories}</h1>
+      <div className={cn("flex flex-wrap items-center justify-between gap-3", isRtl && "flex-row-reverse")}>
+        <h1 className={cn("text-2xl font-bold", isRtl && "text-end")}>{t.nav_categories}</h1>
+        {guideResult?.allItems.some((i) => i.id === "setup_categories") ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={async () => {
+              await confirmCategories();
+              toast.success(t.guide_looks_good_done);
+            }}
+          >
+            <Check className="h-4 w-4" />
+            {t.guide_looks_good}
+          </Button>
+        ) : null}
+      </div>
+
+      {guideResult?.allItems.some(
+        (i) =>
+          i.id === "setup_budget_current" ||
+          i.id === "setup_budget_next" ||
+          i.id === "habit_budget_current" ||
+          i.id === "habit_budget_next" ||
+          i.id === "habit_budget_mismatch"
+      ) && (
+        <GuideBanner
+          message={t.guide_banner_budget}
+          severity={
+            guideResult.allItems.some((i) => i.id === "habit_budget_mismatch")
+              ? "warning"
+              : "info"
+          }
+        />
+      )}
 
       <MonthlyBudgetEditor />
 

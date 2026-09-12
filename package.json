@@ -9,6 +9,7 @@
     "lint": "eslint",
     "grant-admin": "tsx scripts/grant-admin.ts",
     "test:rules": "firebase emulators:exec --only firestore \"npx mocha --timeout 20000 tests/firestore.rules.test.mjs\"",
+    "test:guide": "tsx --test src/lib/guide/evaluate.test.ts",
     "verify:isolation": "tsx scripts/verify-account-isolation.ts"
   },
   "dependencies": {

@@ -476,6 +476,41 @@ export interface Translations {
   tags_picker_search: string;
   tags_picker_no_results: string;
   tags_picker_create: string;
+
+  // Guide / rhythm
+  guide_next_step: string;
+  guide_needs_attention: string;
+  guide_dismiss_snooze: string;
+  guide_bell_title: string;
+  guide_bell_empty: string;
+  guide_suggested: string;
+  guide_looks_good: string;
+  guide_looks_good_done: string;
+  guide_cta: string;
+  guide_setup_categories_title: string;
+  guide_setup_categories_reason: string;
+  guide_setup_import_title: string;
+  guide_setup_import_reason: string;
+  guide_setup_recurring_title: string;
+  guide_setup_recurring_reason: string;
+  guide_setup_budget_current_title: string;
+  guide_setup_budget_current_reason: string;
+  guide_setup_budget_next_title: string;
+  guide_setup_budget_next_reason: string;
+  guide_habit_weekly_activity_title: string;
+  guide_habit_weekly_activity_reason: string;
+  guide_habit_budget_current_title: string;
+  guide_habit_budget_current_reason: string;
+  guide_habit_budget_next_title: string;
+  guide_habit_budget_next_reason: string;
+  guide_habit_budget_mismatch_title: string;
+  guide_habit_budget_mismatch_reason: string;
+  guide_habit_overdue_tasks_title: string;
+  guide_habit_overdue_tasks_reason: string;
+  guide_banner_import: string;
+  guide_banner_budget: string;
+  guide_banner_recurring: string;
+  settings_alerts_guide_email: string;
 }
 
 const en: Translations = {
@@ -938,6 +973,40 @@ const en: Translations = {
   stats_summary_transactions: "Transactions",
   stats_no_results: "No transactions found for the selected filters.",
   stats_loading: "Loading…",
+
+  guide_next_step: "Next step",
+  guide_needs_attention: "Needs attention",
+  guide_dismiss_snooze: "Remind me in a week",
+  guide_bell_title: "Your finance rhythm",
+  guide_bell_empty: "You're on track — nothing waiting.",
+  guide_suggested: "Suggested",
+  guide_looks_good: "Looks good",
+  guide_looks_good_done: "Categories confirmed",
+  guide_cta: "Go",
+  guide_setup_categories_title: "Review your categories",
+  guide_setup_categories_reason: "Confirm or tweak the default categories so budgets match how you spend.",
+  guide_setup_import_title: "Import 3 months of history",
+  guide_setup_import_reason: "A few months of transactions make budgets and patterns reliable.",
+  guide_setup_recurring_title: "Add recurring expenses",
+  guide_setup_recurring_reason: "Rent, subscriptions, and other fixed costs should be listed here.",
+  guide_setup_budget_current_title: "Set this month's budget",
+  guide_setup_budget_current_reason: "Save positive amounts for the current month so the dashboard can guide you.",
+  guide_setup_budget_next_title: "Set next month's budget",
+  guide_setup_budget_next_reason: "Plan next month before it starts — especially when spending already drifted.",
+  guide_habit_weekly_activity_title: "Log or sync this week",
+  guide_habit_weekly_activity_reason: "Keep the books fresh — add expenses or let bank sync run at least weekly.",
+  guide_habit_budget_current_title: "Set this month's budget",
+  guide_habit_budget_current_reason: "This month has no saved budget yet.",
+  guide_habit_budget_next_title: "Set next month's budget",
+  guide_habit_budget_next_reason: "Month-end is close and next month's budget is still empty.",
+  guide_habit_budget_mismatch_title: "Update budgets that drifted",
+  guide_habit_budget_mismatch_reason: "{count} categories are over budget or below recurring costs.",
+  guide_habit_overdue_tasks_title: "Overdue savings tasks",
+  guide_habit_overdue_tasks_reason: "You have {count} open tasks past their due date.",
+  guide_banner_import: "Import enough history so at least 3 months have transactions.",
+  guide_banner_budget: "Save this month's budget (and next month near month-end).",
+  guide_banner_recurring: "Add at least one active recurring expense.",
+  settings_alerts_guide_email: "Also email setup and weekly reminders",
 };
 
 const he: Translations = {
@@ -1400,6 +1469,40 @@ const he: Translations = {
   stats_summary_transactions: "עסקאות",
   stats_no_results: "לא נמצאו עסקאות לפי הסינון שנבחר.",
   stats_loading: "טוען…",
+
+  guide_next_step: "הצעד הבא",
+  guide_needs_attention: "דורש תשומת לב",
+  guide_dismiss_snooze: "תזכיר לי בעוד שבוע",
+  guide_bell_title: "הקצב הפיננסי שלך",
+  guide_bell_empty: "הכול תקין — אין פריטים ממתינים.",
+  guide_suggested: "מוצע",
+  guide_looks_good: "נראה טוב",
+  guide_looks_good_done: "הקטגוריות אושרו",
+  guide_cta: "עבור",
+  guide_setup_categories_title: "סקור את הקטגוריות",
+  guide_setup_categories_reason: "אשר או התאם את ברירת המחדל כדי שהתקציב יתאים להוצאות שלך.",
+  guide_setup_import_title: "ייבא 3 חודשי היסטוריה",
+  guide_setup_import_reason: "כמה חודשי עסקאות הופכים תקציבים ותובנות לאמינים.",
+  guide_setup_recurring_title: "הוסף הוצאות קבועות",
+  guide_setup_recurring_reason: "שכירות, מנויים והוצאות קבועות צריכות להופיע כאן.",
+  guide_setup_budget_current_title: "הגדר תקציב לחודש הנוכחי",
+  guide_setup_budget_current_reason: "שמור סכומים חיוביים לחודש הנוכחי כדי שהלוח יוכל להנחות אותך.",
+  guide_setup_budget_next_title: "הגדר תקציב לחודש הבא",
+  guide_setup_budget_next_reason: "תכנן את החודש הבא לפני שהוא מתחיל — במיוחד אם היו חריגות.",
+  guide_habit_weekly_activity_title: "רשום או סנכרן השבוע",
+  guide_habit_weekly_activity_reason: "שמור על הספרים מעודכנים — הוסף הוצאות או הרץ סנכרון לפחות פעם בשבוע.",
+  guide_habit_budget_current_title: "הגדר תקציב לחודש הנוכחי",
+  guide_habit_budget_current_reason: "לחודש הזה עדיין אין תקציב שמור.",
+  guide_habit_budget_next_title: "הגדר תקציב לחודש הבא",
+  guide_habit_budget_next_reason: "סוף החודש קרוב ותקציב החודש הבא עדיין ריק.",
+  guide_habit_budget_mismatch_title: "עדכן תקציבים שחרגו",
+  guide_habit_budget_mismatch_reason: "{count} קטגוריות חורגות מהתקציב או מתחת להוצאות הקבועות.",
+  guide_habit_overdue_tasks_title: "משימות חיסכון באיחור",
+  guide_habit_overdue_tasks_reason: "יש לך {count} משימות פתוחות שעברו את תאריך היעד.",
+  guide_banner_import: "ייבא מספיק היסטוריה כך שלפחות 3 חודשים יכללו עסקאות.",
+  guide_banner_budget: "שמור תקציב לחודש הנוכחי (ולחודש הבא לקראת סוף החודש).",
+  guide_banner_recurring: "הוסף לפחות הוצאה קבועה פעילה אחת.",
+  settings_alerts_guide_email: "שלח גם תזכורות הקמה ושבועיות באימייל",
 };
 
 export const translations: Record<Locale, Translations> = { en, he };

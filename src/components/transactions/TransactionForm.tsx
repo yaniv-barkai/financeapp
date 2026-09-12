@@ -66,6 +66,7 @@ export function TransactionForm({ existing, onDone, defaultType = "expense" }: P
         date: Timestamp.fromDate(new Date(date + "T12:00:00")),
         ...(note && { note }),
         tags,
+        ...(!existing ? { source: "manual" as const } : {}),
       };
 
       if (existing) {

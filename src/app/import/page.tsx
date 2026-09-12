@@ -27,6 +27,8 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { getIdToken } from "@/lib/auth-token";
 import { useMemo } from "react";
+import { useGuideContext } from "@/components/providers/GuideProvider";
+import { GuideBanner } from "@/components/guide/GuideBanner";
 
 type Step = "upload" | "map" | "review" | "done";
 
@@ -35,6 +37,7 @@ export default function ImportPage() {
   const { user } = useAuth();
   const { activeBookId, books, merchants, categories, tags, currency } = useAppStore();
   const { t, locale } = useLocale();
+  const { result: guideResult } = useGuideContext();
 
   const [step, setStep] = useState<Step>("upload");
   const [csvText, setCsvText] = useState("");
@@ -156,6 +159,7 @@ export default function ImportPage() {
             ...(r.merchantNormalized ? { merchantNormalized: r.merchantNormalized } : {}),
             date: Timestamp.fromDate(r.date),
             tags: r.tags ?? [],
+            source: "csv" as const,
           };
         });
         await batchImportTransactions(user.uid, bookId, txRows, merchantUpdates);
@@ -164,6 +168,7 @@ export default function ImportPage() {
       // Mark rows as imported
       setRows((prev) => prev.map((r) => importedIds.has(r.id) ? { ...r, imported: true } : r));
       setImportedCount((c) => c + importedIds.size);
+      useAppStore.getState().bumpTxVersion();
 
       // Refresh merchants for the active book
       if (activeBookId) {
@@ -240,6 +245,10 @@ export default function ImportPage() {
   return (
     <div className="space-y-5">
       <h1 className="text-2xl font-bold">{t.import_title}</h1>
+
+      {guideResult?.allItems.some((i) => i.id === "setup_import") && (
+        <GuideBanner message={t.guide_banner_import} />
+      )}
 
       {/* Steps indicator */}
       <div className="flex items-center gap-2 text-sm">

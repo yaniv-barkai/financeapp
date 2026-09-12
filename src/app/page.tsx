@@ -37,6 +37,8 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
+import { useGuideContext } from "@/components/providers/GuideProvider";
+import { GuideNextStepCard } from "@/components/guide/GuideNextStepCard";
 
 // ─── Sortable category row ────────────────────────────────────────────────────
 
@@ -81,6 +83,7 @@ export default function DashboardPage() {
   const { t, locale } = useLocale();
   const isRtl = locale === "he";
   const confirm = useConfirm();
+  const { result: guideResult, snooze } = useGuideContext();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [limits, setLimits] = useState<Record<string, number>>({});
@@ -352,6 +355,14 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold">{t.dashboard_title}</h1>
         <MonthSwitcher />
       </div>
+
+      {guideResult?.primary && (
+        <GuideNextStepCard
+          item={guideResult.primary}
+          heading={guideResult.setupComplete ? "attention" : "next"}
+          onSnooze={(item) => snooze(item.id)}
+        />
+      )}
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
