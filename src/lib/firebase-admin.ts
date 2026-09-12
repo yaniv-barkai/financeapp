@@ -1,5 +1,3 @@
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { getApps, initializeApp, cert, applicationDefault, App } from "firebase-admin/app";
 import { getAuth, Auth } from "firebase-admin/auth";
 import { getFirestore, Firestore } from "firebase-admin/firestore";
@@ -10,11 +8,25 @@ function resolveServiceAccountJson(): string | null {
 
   const filePath = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_FILE?.trim();
   if (!filePath) return null;
-  const absolute = resolve(process.cwd(), filePath);
+
+  // Lazy fs/path so Turbopack does not NFT-trace the whole project from cwd.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { existsSync, readFileSync } = require("node:fs") as typeof import("node:fs");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { resolve } = require("node:path") as typeof import("node:path");
+  const absolute = resolve(/*turbopackIgnore: true*/ process.cwd(), filePath);
   if (!existsSync(absolute)) {
     throw new Error(`FIREBASE_SERVICE_ACCOUNT_KEY_FILE not found: ${absolute}`);
   }
   return readFileSync(absolute, "utf8");
+}
+
+function parseServiceAccount(json: string): Record<string, unknown> {
+  try {
+    return JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON");
+  }
 }
 
 function initAdminApp(): App {
@@ -22,12 +34,14 @@ function initAdminApp(): App {
 
   const serviceAccountJson = resolveServiceAccountJson();
   if (serviceAccountJson) {
-    return initializeApp({ credential: cert(JSON.parse(serviceAccountJson)) });
+    return initializeApp({ credential: cert(parseServiceAccount(serviceAccountJson)) });
   }
 
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   if (!projectId) {
-    throw new Error("Firebase Admin is not configured");
+    throw new Error(
+      "Firebase Admin is not configured. Set FIREBASE_SERVICE_ACCOUNT_KEY (or FIREBASE_SERVICE_ACCOUNT_KEY_FILE locally)."
+    );
   }
 
   try {
@@ -36,7 +50,9 @@ function initAdminApp(): App {
       projectId,
     });
   } catch {
-    return initializeApp({ projectId });
+    throw new Error(
+      "Firebase Admin credentials unavailable. Set FIREBASE_SERVICE_ACCOUNT_KEY for this environment."
+    );
   }
 }
 
