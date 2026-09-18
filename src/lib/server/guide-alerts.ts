@@ -6,6 +6,7 @@ import {
   evaluateGuide,
   findMismatchCategoryIds,
   GUIDE_SETUP_EMAIL_MIN_ACCOUNT_DAYS,
+  isGuideBudgetComplete,
   monthKeysFromDates,
 } from "@/lib/guide/evaluate";
 import { guideItemReason, guideItemTitle } from "@/lib/guide/copy";
@@ -156,10 +157,15 @@ export async function buildGuideEmailDigest(
 
   const recurringByCat: Record<string, number> = {};
   let hasActiveExpenseRecurring = false;
+  let monthlyIncome = 0;
   for (const r of recurrings.filter((x) => x.active)) {
-    if (r.type === "expense") hasActiveExpenseRecurring = true;
     const monthly = toMonthly(r.amount, r.cadence);
-    recurringByCat[r.categoryId] = (recurringByCat[r.categoryId] ?? 0) + monthly;
+    if (r.type === "expense") {
+      hasActiveExpenseRecurring = true;
+      recurringByCat[r.categoryId] = (recurringByCat[r.categoryId] ?? 0) + monthly;
+    } else if (r.type === "income") {
+      monthlyIncome += monthly;
+    }
   }
 
   const spentByCat = computeExpenseByCategory(monthTxs);
@@ -209,8 +215,8 @@ export async function buildGuideEmailDigest(
     transactionMonthKeys: monthKeysFromDates(historyTxs.map((tx) => tx.date.toDate())),
     recentActivityAt,
     hasActiveExpenseRecurring,
-    currentBudgetSet: currentAmounts !== null,
-    nextBudgetSet: nextAmounts !== null,
+    currentBudgetSet: isGuideBudgetComplete(currentAmounts, monthlyIncome),
+    nextBudgetSet: isGuideBudgetComplete(nextAmounts, monthlyIncome),
     mismatchCategoryIds,
     overdueTaskCount,
     snoozedUntil,

@@ -219,6 +219,31 @@ export function monthKeysFromDates(dates: Date[]): string[] {
   return [...new Set(dates.map((d) => getMonthKey(d)))];
 }
 
+/** Sum of positive category budget amounts. */
+export function totalBudgetAmount(amounts: Record<string, number>): number {
+  let total = 0;
+  for (const v of Object.values(amounts)) {
+    if (typeof v === "number" && v > 0) total += v;
+  }
+  return total;
+}
+
+/**
+ * Guide treats a month budget as complete only when positive amounts exist
+ * and planned expenses do not exceed recurring monthly income.
+ * Income ≤ 0 still requires amounts (cannot validate balance without income).
+ */
+export function isGuideBudgetComplete(
+  amounts: Record<string, number> | null | undefined,
+  monthlyIncome: number
+): boolean {
+  if (!amounts) return false;
+  const total = totalBudgetAmount(amounts);
+  if (total <= 0) return false;
+  if (monthlyIncome <= 0) return false;
+  return total <= monthlyIncome;
+}
+
 /** Category ids where spent > budget or budget < recurring monthly. */
 export function findMismatchCategoryIds(
   expenseCategoryIds: string[],

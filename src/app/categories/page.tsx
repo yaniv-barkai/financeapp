@@ -68,14 +68,14 @@ interface CategoryFormData {
 
 // ─── Sortable category row ────────────────────────────────────────────────────
 
-function SortableCatRow({ id, isRtl, children }: { id: string; isRtl: boolean; children: React.ReactNode }) {
+function SortableCatRow({ id, children }: { id: string; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id });
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
-      className={cn("flex items-center gap-2", isRtl && "flex-row-reverse")}
+      className="flex items-center gap-2"
     >
       <div
         {...attributes}
@@ -328,16 +328,16 @@ export default function CategoriesPage() {
               <p className="text-center text-muted-foreground text-sm py-4">{t.categories_no_categories}</p>
             )}
             {sorted.map((cat) => (
-              <SortableCatRow key={cat.id} id={cat.id} isRtl={isRtl}>
-                <div className={cn("flex items-center gap-3 px-4 py-3 rounded-lg border bg-card", isRtl && "flex-row-reverse")}>
+              <SortableCatRow key={cat.id} id={cat.id}>
+                <div className="flex items-center gap-3 px-4 py-3 rounded-lg border bg-card">
                   <span
                     className="text-xl w-9 h-9 flex items-center justify-center rounded-lg flex-shrink-0"
                     style={{ backgroundColor: cat.color + "22" }}
                   >
                     {cat.icon}
                   </span>
-                  <div className={cn("flex-1 min-w-0", isRtl && "text-end")}>
-                    <div className={cn("flex items-center gap-2", isRtl && "justify-end")}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
                       <span className="font-medium text-sm">{getCategoryDisplayName(cat, locale)}</span>
                       {cat.pinned && <Pin className="h-3 w-3 text-primary" />}
                     </div>
@@ -375,8 +375,8 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-5" dir={isRtl ? "rtl" : "ltr"}>
-      <div className={cn("flex flex-wrap items-center justify-between gap-3", isRtl && "flex-row-reverse")}>
-        <h1 className={cn("text-2xl font-bold", isRtl && "text-end")}>{t.nav_categories}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">{t.nav_categories}</h1>
         {guideResult?.allItems.some((i) => i.id === "setup_categories") ? (
           <Button
             type="button"
@@ -422,7 +422,7 @@ export default function CategoriesPage() {
         )}
       >
         <CardHeader className="pb-2">
-          <CardTitle className={cn("text-sm text-muted-foreground font-normal", isRtl && "text-end")}>{t.budget_summary_subtitle}</CardTitle>
+          <CardTitle className="text-sm text-muted-foreground font-normal">{t.budget_summary_subtitle}</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <div className="grid grid-cols-3 gap-3">
@@ -495,12 +495,12 @@ export default function CategoriesPage() {
               {tags.map((tag) => {
                 const stats = tagStats[tag.id];
                 return (
-                  <div key={tag.id} className={cn("flex items-center gap-3 px-4 py-3 rounded-lg border bg-card", isRtl && "flex-row-reverse")}>
+                  <div key={tag.id} className="flex items-center gap-3 px-4 py-3 rounded-lg border bg-card">
                     <span
                       className="w-4 h-4 rounded-full flex-shrink-0"
                       style={{ backgroundColor: tag.color }}
                     />
-                    <div className={cn("flex-1 min-w-0", isRtl && "text-end")}>
+                    <div className="flex-1 min-w-0">
                       <span className="font-medium text-sm">{tag.name}</span>
                       {tagStatsLoaded && (
                         <p className="text-xs text-muted-foreground mt-0.5">

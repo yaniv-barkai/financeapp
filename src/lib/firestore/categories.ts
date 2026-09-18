@@ -39,7 +39,7 @@ export async function getCategories(
   const snap = await getDocs(
     query(catsRef(uid, bookId), orderBy("order"))
   );
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Category);
+  return snap.docs.map((d) => ({ ...d.data(), id: d.id }) as Category);
 }
 
 export async function addCategory(

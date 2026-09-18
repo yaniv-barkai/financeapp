@@ -157,6 +157,7 @@ export interface Translations {
   monthly_budget_below_recurring: string;
   monthly_budget_tx_count: string;
   monthly_budget_no_transactions: string;
+  monthly_budget_over_income: string;
 
   // Settings page
   settings_title: string;
@@ -661,6 +662,7 @@ const en: Translations = {
   monthly_budget_below_recurring: "Below recurring — raise budget to cover fixed costs",
   monthly_budget_tx_count: "{count} transactions",
   monthly_budget_no_transactions: "No transactions in this category this month.",
+  monthly_budget_over_income: "Budget exceeds income — reduce expenses or increase income so Left is not negative.",
 
   settings_title: "Settings",
   settings_preferences: "Preferences",
@@ -990,21 +992,21 @@ const en: Translations = {
   guide_setup_recurring_title: "Add recurring expenses",
   guide_setup_recurring_reason: "Rent, subscriptions, and other fixed costs should be listed here.",
   guide_setup_budget_current_title: "Set this month's budget",
-  guide_setup_budget_current_reason: "Save positive amounts for the current month so the dashboard can guide you.",
+  guide_setup_budget_current_reason: "Save a budget that fits within your monthly income — expenses should not exceed income.",
   guide_setup_budget_next_title: "Set next month's budget",
-  guide_setup_budget_next_reason: "Plan next month before it starts — especially when spending already drifted.",
+  guide_setup_budget_next_reason: "Plan next month within your income before it starts.",
   guide_habit_weekly_activity_title: "Log or sync this week",
   guide_habit_weekly_activity_reason: "Keep the books fresh — add expenses or let bank sync run at least weekly.",
   guide_habit_budget_current_title: "Set this month's budget",
-  guide_habit_budget_current_reason: "This month has no saved budget yet.",
+  guide_habit_budget_current_reason: "This month's budget is missing or exceeds your income.",
   guide_habit_budget_next_title: "Set next month's budget",
-  guide_habit_budget_next_reason: "Month-end is close and next month's budget is still empty.",
+  guide_habit_budget_next_reason: "Month-end is close and next month's budget is missing or exceeds income.",
   guide_habit_budget_mismatch_title: "Update budgets that drifted",
   guide_habit_budget_mismatch_reason: "{count} categories are over budget or below recurring costs.",
   guide_habit_overdue_tasks_title: "Overdue savings tasks",
   guide_habit_overdue_tasks_reason: "You have {count} open tasks past their due date.",
   guide_banner_import: "Import enough history so at least 3 months have transactions.",
-  guide_banner_budget: "Save this month's budget (and next month near month-end).",
+  guide_banner_budget: "Save a budget that fits within your income (and next month near month-end).",
   guide_banner_recurring: "Add at least one active recurring expense.",
   settings_alerts_guide_email: "Also email setup and weekly reminders",
 };
@@ -1157,6 +1159,7 @@ const he: Translations = {
   monthly_budget_below_recurring: "מתחת לקבוע — העלו את התקציב לכיסוי ההוצאות הקבועות",
   monthly_budget_tx_count: "{count} עסקאות",
   monthly_budget_no_transactions: "אין עסקאות בקטגוריה זו בחודש זה.",
+  monthly_budget_over_income: "התקציב גבוה מההכנסה — הפחת הוצאות או הגדל הכנסה כך ש״נותר״ לא יהיה שלילי.",
 
   settings_title: "הגדרות",
   settings_preferences: "העדפות",
@@ -1486,21 +1489,21 @@ const he: Translations = {
   guide_setup_recurring_title: "הוסף הוצאות קבועות",
   guide_setup_recurring_reason: "שכירות, מנויים והוצאות קבועות צריכות להופיע כאן.",
   guide_setup_budget_current_title: "הגדר תקציב לחודש הנוכחי",
-  guide_setup_budget_current_reason: "שמור סכומים חיוביים לחודש הנוכחי כדי שהלוח יוכל להנחות אותך.",
+  guide_setup_budget_current_reason: "שמור תקציב שנכנס במסגרת ההכנסה החודשית — ההוצאות לא צריכות לעלות על ההכנסה.",
   guide_setup_budget_next_title: "הגדר תקציב לחודש הבא",
-  guide_setup_budget_next_reason: "תכנן את החודש הבא לפני שהוא מתחיל — במיוחד אם היו חריגות.",
+  guide_setup_budget_next_reason: "תכנן את החודש הבא במסגרת ההכנסה לפני שהוא מתחיל.",
   guide_habit_weekly_activity_title: "רשום או סנכרן השבוע",
   guide_habit_weekly_activity_reason: "שמור על הספרים מעודכנים — הוסף הוצאות או הרץ סנכרון לפחות פעם בשבוע.",
   guide_habit_budget_current_title: "הגדר תקציב לחודש הנוכחי",
-  guide_habit_budget_current_reason: "לחודש הזה עדיין אין תקציב שמור.",
+  guide_habit_budget_current_reason: "תקציב החודש חסר או גבוה מההכנסה.",
   guide_habit_budget_next_title: "הגדר תקציב לחודש הבא",
-  guide_habit_budget_next_reason: "סוף החודש קרוב ותקציב החודש הבא עדיין ריק.",
+  guide_habit_budget_next_reason: "סוף החודש קרוב ותקציב החודש הבא חסר או גבוה מההכנסה.",
   guide_habit_budget_mismatch_title: "עדכן תקציבים שחרגו",
   guide_habit_budget_mismatch_reason: "{count} קטגוריות חורגות מהתקציב או מתחת להוצאות הקבועות.",
   guide_habit_overdue_tasks_title: "משימות חיסכון באיחור",
   guide_habit_overdue_tasks_reason: "יש לך {count} משימות פתוחות שעברו את תאריך היעד.",
   guide_banner_import: "ייבא מספיק היסטוריה כך שלפחות 3 חודשים יכללו עסקאות.",
-  guide_banner_budget: "שמור תקציב לחודש הנוכחי (ולחודש הבא לקראת סוף החודש).",
+  guide_banner_budget: "שמור תקציב שנכנס במסגרת ההכנסה (ולחודש הבא לקראת סוף החודש).",
   guide_banner_recurring: "הוסף לפחות הוצאה קבועה פעילה אחת.",
   settings_alerts_guide_email: "שלח גם תזכורות הקמה ושבועיות באימייל",
 };

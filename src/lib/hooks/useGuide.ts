@@ -7,6 +7,7 @@ import { useAppStore } from "@/lib/store";
 import {
   evaluateGuide,
   findMismatchCategoryIds,
+  isGuideBudgetComplete,
   monthKeysFromDates,
   type GuideResult,
 } from "@/lib/guide/evaluate";
@@ -16,7 +17,7 @@ import {
   markCategoriesReviewed,
   snoozeGuideItem,
 } from "@/lib/firestore/guide";
-import { isMonthlyBudgetSet, getMonthlyBudget } from "@/lib/firestore/budgets";
+import { getMonthlyBudget } from "@/lib/firestore/budgets";
 import { getRecurring, toMonthlyRecurringAmount } from "@/lib/firestore/recurring";
 import { getTransactionsByMonth } from "@/lib/firestore/transactions";
 import { getTasks } from "@/lib/firestore/tasks";
@@ -54,33 +55,36 @@ export function useGuide() {
           guideState,
           settings,
           recurrings,
-          currentSet,
-          nextSet,
           historyTxs,
           monthTxs,
           tasks,
           currentBudget,
+          nextBudget,
         ] = await Promise.all([
           getGuideState(user.uid, activeBookId),
           getUserSettings(user.uid),
           getRecurring(user.uid, activeBookId),
-          isMonthlyBudgetSet(user.uid, activeBookId, monthKey),
-          isMonthlyBudgetSet(user.uid, activeBookId, nextMonthKey),
           getTransactionsByMonth(user.uid, activeBookId, historyStart, monthEnd),
           getTransactionsByMonth(user.uid, activeBookId, monthStart, monthEnd),
           getTasks(user.uid, activeBookId),
           getMonthlyBudget(user.uid, activeBookId, monthKey),
+          getMonthlyBudget(user.uid, activeBookId, nextMonthKey),
         ]);
 
         if (cancelled) return;
 
         const recurringByCat: Record<string, number> = {};
         let hasActiveExpenseRecurring = false;
+        let monthlyIncome = 0;
         for (const r of recurrings.filter((x) => x.active)) {
-          if (r.type === "expense") hasActiveExpenseRecurring = true;
           const monthly = toMonthlyRecurringAmount(r.amount, r.cadence);
-          recurringByCat[r.categoryId] =
-            (recurringByCat[r.categoryId] ?? 0) + monthly;
+          if (r.type === "expense") {
+            hasActiveExpenseRecurring = true;
+            recurringByCat[r.categoryId] =
+              (recurringByCat[r.categoryId] ?? 0) + monthly;
+          } else if (r.type === "income") {
+            monthlyIncome += monthly;
+          }
         }
 
         const spentByCat = computeExpenseByCategory(monthTxs);
@@ -94,6 +98,8 @@ export function useGuide() {
           budgetAmounts,
           recurringByCat
         );
+        const currentSet = isGuideBudgetComplete(currentBudget?.amounts, monthlyIncome);
+        const nextSet = isGuideBudgetComplete(nextBudget?.amounts, monthlyIncome);
 
         const transactionMonthKeys = monthKeysFromDates(
           historyTxs.map((tx) => tx.date.toDate())

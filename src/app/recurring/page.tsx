@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, ArrowRightLeft } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Plus, Pencil, Trash2, ArrowRightLeft, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { Timestamp } from "firebase/firestore";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -14,16 +14,17 @@ import {
   deleteRecurring,
   bookingDateForMonth,
   advanceNextRunPast,
+  toMonthlyRecurringAmount,
 } from "@/lib/firestore/recurring";
 import { addTransaction } from "@/lib/firestore/transactions";
 import { Recurring } from "@/lib/types";
-import { formatCurrency, formatDate, getMonthRange } from "@/lib/utils";
+import { cn, formatCurrency, formatDate, getMonthRange } from "@/lib/utils";
 import { CategoryPicker } from "@/components/transactions/CategoryPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -70,7 +71,8 @@ export default function RecurringPage() {
   const { loading } = useRequireAuth();
   const { user } = useAuth();
   const { activeBookId, categories, currency, activeMonth, bumpTxVersion } = useAppStore();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const isRtl = locale === "he";
   const { result: guideResult, refresh: refreshGuide } = useGuideContext();
 
   const confirm = useConfirm();
@@ -90,6 +92,23 @@ export default function RecurringPage() {
   useEffect(() => {
     loadData();
   }, [user, activeBookId]);
+
+  const activeRecurrings = useMemo(() => recurrings.filter((r) => r.active), [recurrings]);
+  const monthlyIncome = useMemo(
+    () =>
+      activeRecurrings
+        .filter((r) => r.type === "income")
+        .reduce((s, r) => s + toMonthlyRecurringAmount(r.amount, r.cadence), 0),
+    [activeRecurrings]
+  );
+  const monthlyExpenses = useMemo(
+    () =>
+      activeRecurrings
+        .filter((r) => r.type === "expense")
+        .reduce((s, r) => s + toMonthlyRecurringAmount(r.amount, r.cadence), 0),
+    [activeRecurrings]
+  );
+  const monthlyNet = monthlyIncome - monthlyExpenses;
 
   const openNew = () => {
     setEditItem(null);
@@ -208,6 +227,55 @@ export default function RecurringPage() {
         <GuideBanner message={t.guide_banner_recurring} />
       )}
 
+      {activeRecurrings.length > 0 && (
+        <Card
+          dir={isRtl ? "rtl" : "ltr"}
+          className={cn(
+            monthlyNet < 0 && "border-red-200 bg-red-50/60 dark:border-red-900/50 dark:bg-red-950/25"
+          )}
+        >
+          <CardHeader className="pb-2">
+            <CardTitle className={cn("text-sm text-muted-foreground font-normal", isRtl && "text-end")}>
+              {t.budget_summary_subtitle}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="flex flex-col gap-1 items-start">
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <TrendingUp className="h-3.5 w-3.5 text-green-500" />
+                  {t.budget_summary_income}
+                </span>
+                <span className="text-lg font-bold text-green-600 tabular-nums" dir="ltr">
+                  {formatCurrency(monthlyIncome, currency)}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1 items-start">
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <TrendingDown className="h-3.5 w-3.5 text-red-500" />
+                  {t.budget_summary_expenses}
+                </span>
+                <span className="text-lg font-bold text-red-500 tabular-nums" dir="ltr">
+                  {formatCurrency(monthlyExpenses, currency)}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1 items-start">
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Wallet className="h-3.5 w-3.5" />
+                  {t.budget_summary_net}
+                </span>
+                <span
+                  className={`text-lg font-bold tabular-nums ${monthlyNet >= 0 ? "text-green-600" : "text-red-500"}`}
+                  dir="ltr"
+                >
+                  {formatCurrency(monthlyNet, currency)}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent className="p-0 divide-y">
           {recurrings.length === 0 && (
@@ -224,6 +292,11 @@ export default function RecurringPage() {
                   <p className="text-sm font-medium truncate">
                     {r.merchantDisplay || cat?.name}
                   </p>
+                  {r.note?.trim() && (
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                      {r.note.trim()}
+                    </p>
+                  )}
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     <Badge variant="outline" className="text-xs py-0">{cadenceLabel(r.cadence)}</Badge>
                     <span className="text-xs text-muted-foreground">

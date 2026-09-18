@@ -7,7 +7,7 @@ import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useAppStore } from "@/lib/store";
 import { useLocale } from "@/components/providers/LocaleProvider";
-import { parseCsvText, autoDetectColumns, buildImportRows, DateFormat } from "@/lib/csv";
+import { parseCsvText, autoDetectColumns, buildImportRows, DateFormat, isChargedAmountColumn } from "@/lib/csv";
 import { batchImportTransactions } from "@/lib/firestore/transactions";
 import { getMerchants } from "@/lib/firestore/merchants";
 import { ImportRow } from "@/lib/types";
@@ -27,6 +27,7 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { getIdToken } from "@/lib/auth-token";
 import { useMemo } from "react";
+import { toast } from "sonner";
 import { useGuideContext } from "@/components/providers/GuideProvider";
 import { GuideBanner } from "@/components/guide/GuideBanner";
 
@@ -91,6 +92,8 @@ export default function ImportPage() {
       setDebitCol(detected.debitCol ?? "");
       setCreditCol(detected.creditCol ?? "");
       setUseDebitCredit(!!(detected.debitCol && detected.creditCol));
+      // Charged/billing columns (common in IL bank CSVs) list expenses as positive numbers
+      setNegativeIsExpense(!isChargedAmountColumn(detected.amountCol));
 
       setStep("map");
     };
@@ -184,11 +187,47 @@ export default function ImportPage() {
     setAiCategorizing(true);
     setAiDoneCount(null);
     try {
-      const uncategorized = rows.filter((r) => !r.skip);
-      const uniqueMerchants = [...new Set(uncategorized.map((r) => r.merchantDisplay).filter(Boolean))];
+      const knownIds = new Set(categories.map((c) => c.id));
+      // Treat missing / unknown category ids as uncategorized
+      const targets = rows.filter(
+        (r) => !r.skip && !r.imported && (!r.categoryId || !knownIds.has(r.categoryId))
+      );
+      const uniqueMerchants = [...new Set(targets.map((r) => r.merchantDisplay).filter(Boolean))];
+
+      if (uniqueMerchants.length === 0) {
+        toast.info(
+          rows.some((r) => !r.skip && !r.imported && !r.merchantDisplay)
+            ? "No merchant names found — map the merchant column first."
+            : "All visible rows already have a category."
+        );
+        return;
+      }
+
+      if (categories.length === 0) {
+        toast.error("No categories loaded. Open Categories or refresh, then try again.");
+        return;
+      }
 
       const idToken = await getIdToken();
-      if (!idToken) return;
+      if (!idToken) {
+        toast.error("Not signed in — refresh and try again.");
+        return;
+      }
+
+      const payloadCategories = categories
+        .filter((c) => c.id && c.name)
+        .map((c) => ({
+          id: c.id,
+          name: c.name,
+          nameEn: c.nameEn,
+          icon: c.icon,
+          type: c.type,
+        }));
+
+      if (payloadCategories.length === 0) {
+        toast.error("Categories are missing ids — refresh the page and try again.");
+        return;
+      }
 
       const res = await fetch("/api/categorize", {
         method: "POST",
@@ -198,26 +237,41 @@ export default function ImportPage() {
         },
         body: JSON.stringify({
           merchants: uniqueMerchants,
-          categories: categories.map((c) => ({
-            id: c.id,
-            name: c.name,
-            nameEn: c.nameEn,
-            icon: c.icon,
-            type: c.type,
-          })),
+          categories: payloadCategories,
         }),
       });
-      const { matches } = await res.json() as { matches: Record<string, string> };
+      const data = await res.json() as { matches?: Record<string, string>; error?: string };
+      if (!res.ok) {
+        toast.error(data.error ?? "AI categorize failed.");
+        return;
+      }
 
-      let count = 0;
-      setRows((prev) =>
-        prev.map((r) => {
-          const catId = matches[r.merchantDisplay];
-          if (catId) { count++; return { ...r, categoryId: catId }; }
-          return r;
-        })
+      const matches = data.matches ?? {};
+      const matchByNorm = new Map(
+        Object.entries(matches).map(([k, v]) => [k.normalize("NFC").trim().toLowerCase(), v])
       );
+
+      const next = rows.map((r) => {
+        if (r.skip || r.imported) return r;
+        if (r.categoryId && knownIds.has(r.categoryId)) return r;
+        const catId =
+          matches[r.merchantDisplay] ??
+          matchByNorm.get(r.merchantDisplay.normalize("NFC").trim().toLowerCase());
+        if (catId) return { ...r, categoryId: catId };
+        return r;
+      });
+      const count = next.filter((r, i) => r.categoryId && r.categoryId !== rows[i].categoryId).length;
+      setRows(next);
       setAiDoneCount(count);
+      if (count === 0) {
+        toast.warning(
+          `AI returned no matches (${uniqueMerchants.length} merchants, ${payloadCategories.length} categories).`
+        );
+      } else {
+        toast.success(`AI categorized ${count} rows.`);
+      }
+    } catch {
+      toast.error("AI categorize failed. Try again.");
     } finally {
       setAiCategorizing(false);
     }

@@ -218,7 +218,11 @@ export function MonthlyBudgetEditor() {
       setIsSet(true);
       setSeededFrom("month");
       bumpTxVersion();
-      toast.success(t.monthly_budget_saved);
+      if (budgetLeft < 0) {
+        toast.warning(t.monthly_budget_over_income);
+      } else {
+        toast.success(t.monthly_budget_saved);
+      }
     } catch {
       toast.error(t.monthly_budget_save_error);
     } finally {
@@ -410,7 +414,12 @@ export function MonthlyBudgetEditor() {
       </CardHeader>
 
       {/* Sticky live summary — stays visible while editing category amounts */}
-      <div className="sticky top-14 z-20 border-y bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 px-4 py-3">
+      <div
+        className={cn(
+          "sticky top-14 z-20 border-y bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 px-4 py-3",
+          budgetLeft < 0 && "bg-red-50/80 border-red-200 dark:bg-red-950/30 dark:border-red-900"
+        )}
+      >
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="flex flex-col gap-0.5 items-start">
             <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -452,6 +461,11 @@ export function MonthlyBudgetEditor() {
             </span>
           </div>
         </div>
+        {budgetLeft < 0 && (
+          <p className={cn("mt-2 text-xs text-red-600", align)}>
+            {t.monthly_budget_over_income}
+          </p>
+        )}
       </div>
 
       <CardContent className="pt-4">

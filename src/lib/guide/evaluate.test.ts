@@ -5,6 +5,7 @@ import {
   evaluateGuide,
   findMismatchCategoryIds,
   isCategoriesStepDone,
+  isGuideBudgetComplete,
   monthKeysFromDates,
   type GuideEvaluateInput,
 } from "./evaluate";
@@ -167,6 +168,31 @@ describe("evaluateGuide", () => {
     const result = evaluateGuide(baseInput({ overdueTaskCount: 2 }));
     assert.equal(result.primary?.id, "habit_overdue_tasks");
     assert.equal(result.navDots["/tasks"], true);
+  });
+
+  it("keeps budget setup open when budget exceeds income (caller sets currentBudgetSet false)", () => {
+    const result = evaluateGuide(
+      baseInput({
+        currentBudgetSet: false,
+      })
+    );
+    assert.equal(result.setupComplete, false);
+    assert.equal(result.primary?.id, "setup_budget_current");
+  });
+});
+
+describe("isGuideBudgetComplete", () => {
+  it("requires positive amounts within income", () => {
+    assert.equal(isGuideBudgetComplete({ a: 100, b: 50 }, 200), true);
+    assert.equal(isGuideBudgetComplete({ a: 100, b: 50 }, 150), true);
+    assert.equal(isGuideBudgetComplete({ a: 100, b: 50 }, 149), false);
+  });
+
+  it("is incomplete when empty, missing, or no income", () => {
+    assert.equal(isGuideBudgetComplete(null, 1000), false);
+    assert.equal(isGuideBudgetComplete({}, 1000), false);
+    assert.equal(isGuideBudgetComplete({ a: 0 }, 1000), false);
+    assert.equal(isGuideBudgetComplete({ a: 100 }, 0), false);
   });
 });
 
