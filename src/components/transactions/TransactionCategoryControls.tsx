@@ -14,6 +14,7 @@ export function TransactionCategoryControls({
   onChange,
   tagsSlot,
   note,
+  installmentLabel,
 }: {
   tx: Transaction;
   catIcon: string;
@@ -21,8 +22,10 @@ export function TransactionCategoryControls({
   onChange: (categoryId: string) => void;
   tagsSlot?: React.ReactNode;
   note?: string;
+  installmentLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const metaNote = installmentLabel || note;
 
   return (
     <>
@@ -55,7 +58,9 @@ export function TransactionCategoryControls({
           )}
         </p>
         {tagsSlot}
-        {note && <p className="text-xs text-muted-foreground italic truncate">{note}</p>}
+        {metaNote && (
+          <p className="text-xs text-muted-foreground italic truncate">{metaNote}</p>
+        )}
       </div>
       <CategoryPicker
         value={tx.categoryId}

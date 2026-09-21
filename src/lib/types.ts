@@ -52,6 +52,10 @@ export interface Transaction {
   note?: string;
   tags: string[];
   splits?: Array<{ categoryId: string; amount: number }>;
+  /** Credit-card installment plan (e.g. payment 2 of 3). */
+  installments?: { number: number; total: number };
+  /** Full purchase amount when `amount` is a single installment. */
+  originalAmount?: number;
   recurringId?: string;
   source?: TransactionSource;
   sourceKey?: string;

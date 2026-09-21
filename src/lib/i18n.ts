@@ -399,6 +399,7 @@ export interface Translations {
   form_merchant_placeholder: string;
   form_note: string;
   form_note_placeholder: string;
+  form_installment: string;
   form_tags: string;
   form_tag_placeholder: string;
   form_add_tag: string;
@@ -914,6 +915,7 @@ const en: Translations = {
   form_merchant_placeholder: "e.g. Trader Joe's",
   form_note: "Note",
   form_note_placeholder: "Optional note…",
+  form_installment: "Payment {n} of {total}",
   form_tags: "Tags",
   form_tag_placeholder: "Add tag…",
   form_add_tag: "Add",
@@ -1424,6 +1426,7 @@ const he: Translations = {
   form_merchant_placeholder: "לדוגמה: סופרמרקט",
   form_note: "הערה",
   form_note_placeholder: "הערה אופציונלית…",
+  form_installment: "תשלום {n} מתוך {total}",
   form_tags: "תגיות",
   form_tag_placeholder: "הוסף תגית…",
   form_add_tag: "הוסף",

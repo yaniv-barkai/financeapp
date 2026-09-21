@@ -8,6 +8,9 @@ export interface ScrapedRow {
   merchantDisplay: string;
   merchantNormalized: string;
   sourceKey: string;
+  note?: string;
+  installments?: { number: number; total: number };
+  originalAmount?: number;
 }
 
 export interface CategoryDoc {
@@ -58,8 +61,15 @@ export async function loadExistingSourceKeys(
     const date = data.date?.toDate?.() as Date | undefined;
     const amount = data.amount as number | undefined;
     const merchant = data.merchantNormalized as string | undefined;
+    const installments = data.installments as
+      | { number: number; total: number }
+      | undefined;
     if (date && amount != null && merchant) {
-      keys.add(buildSourceKey(date, amount, merchant));
+      keys.add(buildSourceKey(date, amount, merchant, installments));
+      // Legacy keys (pre-installment suffix) still block re-import.
+      if (installments) {
+        keys.add(buildSourceKey(date, amount, merchant));
+      }
     }
   }
   return keys;
@@ -75,6 +85,9 @@ export async function importRows(
     merchantNormalized: string;
     categoryId: string;
     sourceKey: string;
+    note?: string;
+    installments?: { number: number; total: number };
+    originalAmount?: number;
   }>,
   opts?: { skipMemoryCategoryIds?: Set<string> }
 ): Promise<number> {
@@ -102,6 +115,9 @@ export async function importRows(
         tags: [],
         source: "max",
         sourceKey: row.sourceKey,
+        ...(row.note ? { note: row.note } : {}),
+        ...(row.installments ? { installments: row.installments } : {}),
+        ...(row.originalAmount != null ? { originalAmount: row.originalAmount } : {}),
         createdAt: Timestamp.now(),
       });
       // Don't bake "unknown" into auto-memory — next sync should still try AI.

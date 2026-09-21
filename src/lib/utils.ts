@@ -22,6 +22,17 @@ export function formatDate(date: Date, locale?: string): string {
   }).format(date);
 }
 
+/** e.g. "Payment 1 of 3" / "תשלום 1 מתוך 3" */
+export function formatInstallmentLabel(
+  template: string,
+  installments?: { number: number; total: number } | null
+): string | undefined {
+  if (!installments) return undefined;
+  return template
+    .replace("{n}", String(installments.number))
+    .replace("{total}", String(installments.total));
+}
+
 export function normalizemerchant(name: string): string {
   return name
     .toLowerCase()

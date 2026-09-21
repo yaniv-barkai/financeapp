@@ -27,6 +27,7 @@ import { Transaction } from "@/lib/types";
 import {
   cn,
   formatCurrency,
+  formatInstallmentLabel,
   getCategoryDisplayName,
   getMonthKey,
   getMonthRange,
@@ -668,6 +669,10 @@ export function MonthlyBudgetEditor() {
                     catLabel={catLabel}
                     onChange={(id) => handleCategoryChange(tx, id)}
                     note={tx.note}
+                    installmentLabel={formatInstallmentLabel(
+                      t.form_installment,
+                      tx.installments
+                    )}
                   />
                   <span
                     className={`font-semibold text-sm flex-shrink-0 ${

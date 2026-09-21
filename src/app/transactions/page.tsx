@@ -17,7 +17,7 @@ import { getUserSettings } from "@/lib/firestore/settings";
 import { upsertMerchant } from "@/lib/firestore/merchants";
 import { addRecurring, skipRecurringPeriod } from "@/lib/firestore/recurring";
 import { Transaction, RecurringCadence, MaxSyncSettings } from "@/lib/types";
-import { formatCurrency, getMonthRange, getCategoryDisplayName } from "@/lib/utils";
+import { formatCurrency, getMonthRange, getCategoryDisplayName, formatInstallmentLabel } from "@/lib/utils";
 import { MonthSwitcher } from "@/components/dashboard/MonthSwitcher";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { CategoryPicker } from "@/components/transactions/CategoryPicker";
@@ -279,6 +279,7 @@ export default function TransactionsPage() {
                   catLabel={catLabel}
                   onChange={(id) => handleCategoryChange(tx, id)}
                   note={tx.note}
+                  installmentLabel={formatInstallmentLabel(t.form_installment, tx.installments)}
                   tagsSlot={
                     txTags.length > 0 ? (
                       <div className="flex gap-1 mt-1 flex-wrap">

@@ -29,14 +29,17 @@ async function main() {
   const rows = await scrapeMaxTransactions(username, password, startDate, endDate);
 
   console.log(`Found ${rows.length} transaction(s):\n`);
-  console.log("Date       Amount    Merchant");
-  console.log("─────────  ────────  ─────────────────────────");
+  console.log("Date       Amount    Installments  Merchant");
+  console.log("─────────  ────────  ────────────  ─────────────────────────");
 
   const sorted = [...rows].sort((a, b) => b.date.getTime() - a.date.getTime());
   for (const row of sorted.slice(0, 30)) {
     const day = israelCalendarDay(row.date);
     const amt = row.amount.toFixed(2).padStart(8);
-    console.log(`${day}  ${amt}  ${row.merchantDisplay}`);
+    const inst = row.installments
+      ? `${row.installments.number}/${row.installments.total}`.padStart(12)
+      : "".padStart(12);
+    console.log(`${day}  ${amt}  ${inst}  ${row.merchantDisplay}`);
   }
   if (sorted.length > 30) {
     console.log(`… and ${sorted.length - 30} more (see JSON file)`);
@@ -48,6 +51,9 @@ async function main() {
     merchant: row.merchantDisplay,
     merchantNormalized: row.merchantNormalized,
     sourceKey: row.sourceKey,
+    note: row.note ?? null,
+    installments: row.installments ?? null,
+    originalAmount: row.originalAmount ?? null,
   }));
 
   writeFileSync(previewPath, JSON.stringify(payload, null, 2));

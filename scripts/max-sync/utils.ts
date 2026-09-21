@@ -48,9 +48,16 @@ export function toIsraelMidnight(date: Date): Date {
   );
 }
 
-export function buildSourceKey(date: Date, amount: number, merchantNormalized: string): string {
+export function buildSourceKey(
+  date: Date,
+  amount: number,
+  merchantNormalized: string,
+  installments?: { number: number; total: number } | null
+): string {
   const day = israelCalendarDay(date);
-  return `max:${day}:${amount.toFixed(2)}:${merchantNormalized}`;
+  const base = `max:${day}:${amount.toFixed(2)}:${merchantNormalized}`;
+  if (!installments) return base;
+  return `${base}:${installments.number}/${installments.total}`;
 }
 
 export function requireEnv(name: string): string {
