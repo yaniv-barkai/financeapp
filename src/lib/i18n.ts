@@ -142,8 +142,11 @@ export interface Translations {
   monthly_budget_col_category: string;
   monthly_budget_col_recurring: string;
   monthly_budget_col_prev: string;
+  monthly_budget_col_avg3: string;
   monthly_budget_col_budget: string;
   monthly_budget_spent: string;
+  monthly_budget_cleanup: string;
+  monthly_budget_cleanup_applied: string;
   monthly_budget_suggest: string;
   monthly_budget_suggesting: string;
   monthly_budget_suggest_error: string;
@@ -338,6 +341,15 @@ export interface Translations {
   recurring_add_to_transaction: string;
   recurring_added_to_transaction: string;
   recurring_add_to_transaction_error: string;
+  recurring_suggestions_title: string;
+  recurring_suggestions_subtitle: string;
+  recurring_suggestions_empty: string;
+  recurring_suggestions_seen: string;
+  recurring_suggestions_accept: string;
+  recurring_suggestions_dismiss: string;
+  recurring_suggestions_accepted: string;
+  recurring_suggestions_accept_error: string;
+  recurring_suggestions_day: string;
 
   // Tasks page
   tasks_title: string;
@@ -647,8 +659,12 @@ const en: Translations = {
   monthly_budget_col_category: "Category",
   monthly_budget_col_recurring: "Recurring",
   monthly_budget_col_prev: "Last month",
+  monthly_budget_col_avg3: "Avg 3 mo",
   monthly_budget_col_budget: "Budget",
   monthly_budget_spent: "Spent",
+  monthly_budget_cleanup: "Clean up",
+  monthly_budget_cleanup_applied:
+    "Budgets reset to recurring minimums (or 0) — save to keep them",
   monthly_budget_suggest: "Suggest solution",
   monthly_budget_suggesting: "Thinking…",
   monthly_budget_suggest_error: "Could not get AI suggestions",
@@ -842,6 +858,15 @@ const en: Translations = {
   recurring_add_to_transaction: "Add to transactions",
   recurring_added_to_transaction: "Added to this month's transactions",
   recurring_add_to_transaction_error: "Could not add transaction",
+  recurring_suggestions_title: "Suggested recurring",
+  recurring_suggestions_subtitle: "Expenses that appeared in at least 2 of the last 3 months on roughly the same day",
+  recurring_suggestions_empty: "No recurring patterns found in the last 3 months.",
+  recurring_suggestions_seen: "Seen in {months}",
+  recurring_suggestions_accept: "Add",
+  recurring_suggestions_dismiss: "Dismiss",
+  recurring_suggestions_accepted: "Added as recurring expense",
+  recurring_suggestions_accept_error: "Could not add recurring expense",
+  recurring_suggestions_day: "Around day {day}",
 
   tasks_title: "Tasks",
   tasks_add: "Add Task",
@@ -1144,8 +1169,12 @@ const he: Translations = {
   monthly_budget_col_category: "קטגוריה",
   monthly_budget_col_recurring: "קבוע",
   monthly_budget_col_prev: "חודש קודם",
+  monthly_budget_col_avg3: "ממוצע 3 ח׳",
   monthly_budget_col_budget: "תקציב",
   monthly_budget_spent: "הוצא",
+  monthly_budget_cleanup: "ניקוי",
+  monthly_budget_cleanup_applied:
+    "התקציבים אופסו למינימום הקבוע (או 0) — שמרו כדי לשמור אותם",
   monthly_budget_suggest: "הצע פתרון",
   monthly_budget_suggesting: "חושב…",
   monthly_budget_suggest_error: "לא ניתן לקבל הצעות AI",
@@ -1339,6 +1368,15 @@ const he: Translations = {
   recurring_add_to_transaction: "הוסף לעסקאות",
   recurring_added_to_transaction: "נוסף לעסקאות החודש",
   recurring_add_to_transaction_error: "לא ניתן להוסיף עסקה",
+  recurring_suggestions_title: "הצעות לתשלומים קבועים",
+  recurring_suggestions_subtitle: "הוצאות שהופיעו בלפחות 2 מתוך 3 החודשים האחרונים בערך באותו יום בחודש",
+  recurring_suggestions_empty: "לא נמצאו דפוסים חוזרים ב־3 החודשים האחרונים.",
+  recurring_suggestions_seen: "נראה ב־{months}",
+  recurring_suggestions_accept: "הוסף",
+  recurring_suggestions_dismiss: "התעלם",
+  recurring_suggestions_accepted: "נוסף כתשלום קבוע",
+  recurring_suggestions_accept_error: "לא ניתן להוסיף תשלום קבוע",
+  recurring_suggestions_day: "סביב יום {day}",
 
   tasks_title: "משימות",
   tasks_add: "הוסף משימה",

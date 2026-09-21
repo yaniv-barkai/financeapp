@@ -1,7 +1,18 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Plus, Pencil, Trash2, ArrowRightLeft, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  ArrowRightLeft,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
+  Sparkles,
+  Check,
+  X,
+} from "lucide-react";
 import { Timestamp } from "firebase/firestore";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -16,9 +27,23 @@ import {
   advanceNextRunPast,
   toMonthlyRecurringAmount,
 } from "@/lib/firestore/recurring";
-import { addTransaction } from "@/lib/firestore/transactions";
+import { addTransaction, getTransactionsByMonth } from "@/lib/firestore/transactions";
 import { Recurring } from "@/lib/types";
-import { cn, formatCurrency, formatDate, getMonthRange } from "@/lib/utils";
+import {
+  cn,
+  formatCurrency,
+  formatDate,
+  getMonthKey,
+  getMonthRange,
+  getPrevMonthKey,
+} from "@/lib/utils";
+import {
+  detectRecurringSuggestions,
+  loadDismissedSuggestions,
+  nextRunFromSuggestion,
+  saveDismissedSuggestions,
+  type RecurringSuggestion,
+} from "@/lib/recurring-suggestions";
 import { CategoryPicker } from "@/components/transactions/CategoryPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,21 +102,51 @@ export default function RecurringPage() {
 
   const confirm = useConfirm();
   const [recurrings, setRecurrings] = useState<Recurring[]>([]);
+  const [suggestions, setSuggestions] = useState<RecurringSuggestion[]>([]);
+  const [dismissed, setDismissed] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<Recurring | null>(null);
   const [form, setForm] = useState(BLANK);
   const [saving, setSaving] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
+  const [acceptingFp, setAcceptingFp] = useState<string | null>(null);
+
+  const loadSuggestions = async (existing: Recurring[], dismissedFps: string[]) => {
+    if (!user || !activeBookId) return;
+    const anchor = activeMonth || getMonthKey(new Date());
+    const monthKeys = [anchor, getPrevMonthKey(anchor), getPrevMonthKey(getPrevMonthKey(anchor))];
+    const ranges = monthKeys.map((mk) => getMonthRange(mk));
+    const start = ranges[ranges.length - 1].start;
+    const end = ranges[0].end;
+    const txs = await getTransactionsByMonth(user.uid, activeBookId, start, end);
+    setSuggestions(
+      detectRecurringSuggestions(txs, existing, {
+        anchorMonthKey: anchor,
+        monthsBack: 3,
+        dismissedFingerprints: dismissedFps,
+      })
+    );
+  };
 
   const loadData = async () => {
     if (!user || !activeBookId) return;
     const data = await getRecurring(user.uid, activeBookId);
-    setRecurrings(data.sort((a, b) => a.cadence.localeCompare(b.cadence)));
+    const sorted = data.sort((a, b) => a.cadence.localeCompare(b.cadence));
+    setRecurrings(sorted);
+    await loadSuggestions(sorted, dismissed);
   };
 
   useEffect(() => {
-    loadData();
-  }, [user, activeBookId]);
+    if (!user || !activeBookId) return;
+    const fps = loadDismissedSuggestions(activeBookId);
+    setDismissed(fps);
+    (async () => {
+      const data = await getRecurring(user.uid, activeBookId);
+      const sorted = data.sort((a, b) => a.cadence.localeCompare(b.cadence));
+      setRecurrings(sorted);
+      await loadSuggestions(sorted, fps);
+    })();
+  }, [user, activeBookId, activeMonth]);
 
   const activeRecurrings = useMemo(() => recurrings.filter((r) => r.active), [recurrings]);
   const monthlyIncome = useMemo(
@@ -173,6 +228,39 @@ export default function RecurringPage() {
     refreshGuide();
   };
 
+  const handleAcceptSuggestion = async (s: RecurringSuggestion) => {
+    if (!user || !activeBookId) return;
+    setAcceptingFp(s.fingerprint);
+    try {
+      await addRecurring(user.uid, activeBookId, {
+        type: "expense",
+        amount: s.amount,
+        categoryId: s.categoryId,
+        merchantDisplay: s.merchantDisplay,
+        note: "",
+        cadence: "monthly",
+        dayOfMonth: s.dayOfMonth,
+        nextRunDate: Timestamp.fromDate(nextRunFromSuggestion(s.dayOfMonth)),
+        active: true,
+      });
+      toast.success(t.recurring_suggestions_accepted);
+      await loadData();
+      refreshGuide();
+    } catch {
+      toast.error(t.recurring_suggestions_accept_error);
+    } finally {
+      setAcceptingFp(null);
+    }
+  };
+
+  const handleDismissSuggestion = (s: RecurringSuggestion) => {
+    if (!activeBookId) return;
+    const next = [...dismissed, s.fingerprint];
+    setDismissed(next);
+    saveDismissedSuggestions(activeBookId, next);
+    setSuggestions((prev) => prev.filter((x) => x.fingerprint !== s.fingerprint));
+  };
+
   const handleAddToTransaction = async (r: Recurring) => {
     if (!user || !activeBookId) return;
     setBookingId(r.id);
@@ -225,6 +313,63 @@ export default function RecurringPage() {
 
       {guideResult?.allItems.some((i) => i.id === "setup_recurring") && (
         <GuideBanner message={t.guide_banner_recurring} />
+      )}
+
+      {suggestions.length > 0 && (
+        <Card dir={isRtl ? "rtl" : "ltr"}>
+          <CardHeader className="pb-2">
+            <CardTitle className={cn("flex items-center gap-2 text-base", isRtl && "flex-row-reverse")}>
+              <Sparkles className="h-4 w-4 text-amber-500" />
+              {t.recurring_suggestions_title}
+            </CardTitle>
+            <p className={cn("text-sm text-muted-foreground font-normal", isRtl && "text-end")}>
+              {t.recurring_suggestions_subtitle}
+            </p>
+          </CardHeader>
+          <CardContent className="p-0 divide-y border-t">
+            {suggestions.map((s) => {
+              const cat = categories.find((c) => c.id === s.categoryId);
+              const monthsLabel = s.monthsMatched.join(", ");
+              return (
+                <div key={s.fingerprint} className="flex items-center gap-3 px-4 py-3">
+                  <span className="text-xl w-8 text-center flex-shrink-0">{cat?.icon ?? "💡"}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{s.merchantDisplay}</p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <Badge variant="outline" className="text-xs py-0">
+                        {t.recurring_suggestions_day.replace("{day}", String(s.dayOfMonth))}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {t.recurring_suggestions_seen.replace("{months}", monthsLabel)}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="font-semibold text-sm flex-shrink-0 text-red-500 tabular-nums" dir="ltr">
+                    {formatCurrency(s.amount, currency)}
+                  </span>
+                  <Button
+                    size="sm"
+                    className="h-8 gap-1.5 flex-shrink-0"
+                    disabled={acceptingFp === s.fingerprint}
+                    onClick={() => handleAcceptSuggestion(s)}
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">{t.recurring_suggestions_accept}</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 gap-1.5 flex-shrink-0 text-muted-foreground"
+                    onClick={() => handleDismissSuggestion(s)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">{t.recurring_suggestions_dismiss}</span>
+                  </Button>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
       )}
 
       {activeRecurrings.length > 0 && (

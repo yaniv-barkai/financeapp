@@ -24,6 +24,36 @@ export function computeExpenseByCategory(
   return result;
 }
 
+/** Average monthly expense per category over a fixed month window. */
+export function averageExpenseByCategory(
+  transactions: Transaction[],
+  monthCount: number
+): Record<string, number> {
+  if (monthCount <= 0) return {};
+  const totals = computeExpenseByCategory(transactions);
+  const result: Record<string, number> = {};
+  for (const [catId, amount] of Object.entries(totals)) {
+    result[catId] = amount / monthCount;
+  }
+  return result;
+}
+
+/**
+ * Reset category budgets to the recurring floor (or 0 when there is no recurring).
+ * Amounts are rounded to whole currency units for the editor.
+ */
+export function cleanedBudgetAmounts(
+  categoryIds: string[],
+  recurringByCat: Record<string, number>
+): Record<string, number> {
+  const result: Record<string, number> = {};
+  for (const catId of categoryIds) {
+    const floor = Math.round(recurringByCat[catId] ?? 0);
+    if (floor > 0) result[catId] = floor;
+  }
+  return result;
+}
+
 export function buildCategoryBudgetRows(
   categories: Category[],
   limits: Record<string, number>,

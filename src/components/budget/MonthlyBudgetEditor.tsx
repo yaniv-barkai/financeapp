@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Sparkles, Save, TrendingUp, TrendingDown, Wallet, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eraser, Sparkles, Save, TrendingUp, TrendingDown, Wallet, X } from "lucide-react";
 import { addMonths, subMonths } from "date-fns";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -17,7 +17,11 @@ import {
   updateTransaction,
 } from "@/lib/firestore/transactions";
 import { upsertMerchant } from "@/lib/firestore/merchants";
-import { computeExpenseByCategory } from "@/lib/budget";
+import {
+  averageExpenseByCategory,
+  cleanedBudgetAmounts,
+  computeExpenseByCategory,
+} from "@/lib/budget";
 import { getIdToken } from "@/lib/auth-token";
 import { Transaction } from "@/lib/types";
 import {
@@ -63,6 +67,7 @@ export function MonthlyBudgetEditor() {
   const [recurringByCat, setRecurringByCat] = useState<Record<string, number>>({});
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [prevSpent, setPrevSpent] = useState<Record<string, number>>({});
+  const [avg3Spent, setAvg3Spent] = useState<Record<string, number>>({});
   const [currentSpent, setCurrentSpent] = useState<Record<string, number>>({});
   const [monthTxs, setMonthTxs] = useState<Transaction[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -95,13 +100,15 @@ export function MonthlyBudgetEditor() {
     setLoading(true);
     try {
       const prevKey = getPrevMonthKey(budgetMonth);
-      const { start: prevStart, end: prevEnd } = getMonthRange(prevKey);
+      const historyStartKey = getPrevMonthKey(getPrevMonthKey(prevKey));
+      const { start: historyStart } = getMonthRange(historyStartKey);
+      const { end: prevEnd } = getMonthRange(prevKey);
       const { start, end } = getMonthRange(budgetMonth);
 
-      const [seed, recurrings, prevTxs, monthTransactions] = await Promise.all([
+      const [seed, recurrings, historyTxs, monthTransactions] = await Promise.all([
         getBudgetEditorSeed(user.uid, activeBookId, budgetMonth, categories),
         getRecurring(user.uid, activeBookId),
-        getTransactionsByMonth(user.uid, activeBookId, prevStart, prevEnd),
+        getTransactionsByMonth(user.uid, activeBookId, historyStart, prevEnd),
         getTransactionsByMonth(user.uid, activeBookId, start, end),
       ]);
 
@@ -117,7 +124,12 @@ export function MonthlyBudgetEditor() {
       }
       setRecurringByCat(recMap);
       setMonthlyIncome(incomeTotal);
+
+      const prevTxs = historyTxs.filter(
+        (tx) => getMonthKey(tx.date.toDate()) === prevKey
+      );
       setPrevSpent(computeExpenseByCategory(prevTxs));
+      setAvg3Spent(averageExpenseByCategory(historyTxs, 3));
       setMonthTxs(monthTransactions);
       setCurrentSpent(computeExpenseByCategory(monthTransactions));
       setIsSet(seed.isSet);
@@ -317,6 +329,20 @@ export function MonthlyBudgetEditor() {
     toast.success(t.monthly_budget_suggest_applied);
   };
 
+  const handleCleanup = () => {
+    const cleaned = cleanedBudgetAmounts(
+      expenseCategories.map((c) => c.id),
+      recurringByCat
+    );
+    const next: Record<string, string> = {};
+    for (const cat of expenseCategories) {
+      const v = cleaned[cat.id];
+      next[cat.id] = v !== undefined && v > 0 ? String(v) : "";
+    }
+    setAmounts(next);
+    toast.success(t.monthly_budget_cleanup_applied);
+  };
+
   const removeSuggestion = (catId: string) => {
     setSuggestions((prev) => {
       if (!prev) return prev;
@@ -395,6 +421,16 @@ export function MonthlyBudgetEditor() {
             {seedHint && <span>{seedHint}</span>}
           </div>
           <div className={cn("flex gap-2", isRtl && "order-first")}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={handleCleanup}
+              disabled={loading || expenseCategories.length === 0}
+            >
+              <Eraser className="h-3.5 w-3.5" />
+              {t.monthly_budget_cleanup}
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -479,11 +515,13 @@ export function MonthlyBudgetEditor() {
               <span className={cn("min-w-0 flex-1", align)}>{t.monthly_budget_col_category}</span>
               <span className="w-[90px] shrink-0 text-center">{t.monthly_budget_col_recurring}</span>
               <span className="w-[90px] shrink-0 text-center">{t.monthly_budget_col_prev}</span>
+              <span className="w-[90px] shrink-0 text-center">{t.monthly_budget_col_avg3}</span>
               <span className="w-[110px] shrink-0 text-center">{t.monthly_budget_col_budget}</span>
             </div>
             {expenseCategories.map((cat) => {
               const rec = recurringByCat[cat.id] ?? 0;
               const prev = prevSpent[cat.id] ?? 0;
+              const avg3 = avg3Spent[cat.id] ?? 0;
               const spent = currentSpent[cat.id] ?? 0;
               const budget = parsedAmounts[cat.id] ?? 0;
               const over = budget > 0 && spent > budget;
@@ -556,6 +594,14 @@ export function MonthlyBudgetEditor() {
                     </span>
                     <span dir="ltr" className="inline-block">
                       {prev > 0 ? formatCurrency(prev, currency) : "—"}
+                    </span>
+                  </div>
+                  <div className="w-full text-start text-xs tabular-nums text-muted-foreground sm:w-[90px] sm:shrink-0 sm:text-center">
+                    <span className={cn("sm:hidden text-muted-foreground me-1", align)}>
+                      {t.monthly_budget_col_avg3}:
+                    </span>
+                    <span dir="ltr" className="inline-block">
+                      {avg3 > 0 ? formatCurrency(avg3, currency) : "—"}
                     </span>
                   </div>
                   <Input
