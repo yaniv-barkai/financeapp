@@ -230,7 +230,8 @@ export function totalBudgetAmount(amounts: Record<string, number>): number {
 
 /**
  * Guide treats a month budget as complete only when positive amounts exist
- * and planned expenses do not exceed recurring monthly income.
+ * and planned expenses do not exceed planned monthly income
+ * (saved budget income, or recurring income as fallback).
  * Income ≤ 0 still requires amounts (cannot validate balance without income).
  */
 export function isGuideBudgetComplete(

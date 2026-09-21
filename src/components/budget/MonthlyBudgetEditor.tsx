@@ -65,8 +65,9 @@ export function MonthlyBudgetEditor() {
 
   const [budgetMonth, setBudgetMonth] = useState(() => getMonthKey(new Date()));
   const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const [incomeInput, setIncomeInput] = useState("");
   const [recurringByCat, setRecurringByCat] = useState<Record<string, number>>({});
-  const [monthlyIncome, setMonthlyIncome] = useState(0);
+  const [recurringIncome, setRecurringIncome] = useState(0);
   const [prevSpent, setPrevSpent] = useState<Record<string, number>>({});
   const [avg3Spent, setAvg3Spent] = useState<Record<string, number>>({});
   const [currentSpent, setCurrentSpent] = useState<Record<string, number>>({});
@@ -124,7 +125,7 @@ export function MonthlyBudgetEditor() {
         }
       }
       setRecurringByCat(recMap);
-      setMonthlyIncome(incomeTotal);
+      setRecurringIncome(incomeTotal);
 
       const prevTxs = historyTxs.filter(
         (tx) => getMonthKey(tx.date.toDate()) === prevKey
@@ -135,6 +136,14 @@ export function MonthlyBudgetEditor() {
       setCurrentSpent(computeExpenseByCategory(monthTransactions));
       setIsSet(seed.isSet);
       setSeededFrom(seed.seededFrom);
+
+      let incomeStr = "";
+      if (seed.income !== undefined) {
+        incomeStr = String(seed.income);
+      } else if (incomeTotal > 0) {
+        incomeStr = String(incomeTotal);
+      }
+      setIncomeInput(incomeStr);
 
       const next: Record<string, string> = {};
       for (const cat of expenseCategories) {
@@ -161,6 +170,15 @@ export function MonthlyBudgetEditor() {
     }
     return map;
   }, [amounts]);
+
+  const monthlyIncome = useMemo(() => {
+    const trimmed = incomeInput.trim();
+    if (trimmed !== "") {
+      const n = parseFloat(trimmed);
+      if (!isNaN(n) && n >= 0) return n;
+    }
+    return recurringIncome;
+  }, [incomeInput, recurringIncome]);
 
   const totalBudget = useMemo(
     () => Object.values(parsedAmounts).reduce((s, v) => s + v, 0),
@@ -227,7 +245,13 @@ export function MonthlyBudgetEditor() {
     if (!user || !activeBookId) return;
     setSaving(true);
     try {
-      await saveMonthlyBudget(user.uid, activeBookId, budgetMonth, parsedAmounts);
+      await saveMonthlyBudget(
+        user.uid,
+        activeBookId,
+        budgetMonth,
+        parsedAmounts,
+        monthlyIncome
+      );
       setIsSet(true);
       setSeededFrom("month");
       bumpTxVersion();
@@ -463,9 +487,28 @@ export function MonthlyBudgetEditor() {
               <TrendingUp className="h-3 w-3 text-green-500" />
               {t.monthly_budget_income}
             </span>
-            <span className="text-base font-semibold text-green-600 tabular-nums" dir="ltr">
-              {formatCurrency(monthlyIncome, currency)}
-            </span>
+            <Input
+              type="number"
+              min="0"
+              step="10"
+              inputMode="decimal"
+              className={cn(
+                "h-8 w-full max-w-[140px] text-sm font-semibold text-green-600 tabular-nums",
+                isRtl && "text-right"
+              )}
+              placeholder={
+                recurringIncome > 0 ? String(Math.round(recurringIncome)) : "0"
+              }
+              value={incomeInput}
+              onChange={(e) => setIncomeInput(e.target.value)}
+              aria-label={t.monthly_budget_income}
+              dir="ltr"
+            />
+            {recurringIncome > 0 && !incomeInput && (
+              <span className="text-[10px] text-muted-foreground">
+                {t.monthly_budget_income_from_recurring}
+              </span>
+            )}
           </div>
           <div className="flex flex-col gap-0.5 items-start">
             <span className="flex items-center gap-1 text-[11px] text-muted-foreground">

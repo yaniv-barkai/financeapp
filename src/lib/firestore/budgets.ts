@@ -16,6 +16,11 @@ function budgetRef(uid: string, bookId: string, monthKey: string) {
   return doc(db, "users", uid, "books", bookId, "monthlyBudgets", monthKey);
 }
 
+function parseIncome(raw: unknown): number | undefined {
+  if (typeof raw !== "number" || !Number.isFinite(raw) || raw < 0) return undefined;
+  return Math.round(raw * 100) / 100;
+}
+
 export async function getMonthlyBudget(
   uid: string,
   bookId: string,
@@ -24,9 +29,11 @@ export async function getMonthlyBudget(
   const snap = await getDoc(budgetRef(uid, bookId, monthKey));
   if (!snap.exists()) return null;
   const data = snap.data();
+  const income = parseIncome(data.income);
   return {
     monthKey,
     amounts: (data.amounts as Record<string, number>) ?? {},
+    ...(income !== undefined ? { income } : {}),
     updatedAt: data.updatedAt as Timestamp | undefined,
     createdAt: data.createdAt as Timestamp | undefined,
   };
@@ -46,7 +53,8 @@ export async function saveMonthlyBudget(
   uid: string,
   bookId: string,
   monthKey: string,
-  amounts: Record<string, number>
+  amounts: Record<string, number>,
+  income?: number
 ): Promise<void> {
   assertOwner(uid);
   const cleaned: Record<string, number> = {};
@@ -55,12 +63,14 @@ export async function saveMonthlyBudget(
       cleaned[catId] = Math.round(amount * 100) / 100;
     }
   }
+  const incomeCleaned = parseIncome(income);
   const ref = budgetRef(uid, bookId, monthKey);
   const existing = await getDoc(ref);
   await setDoc(
     ref,
     {
       amounts: cleaned,
+      ...(incomeCleaned !== undefined ? { income: incomeCleaned } : {}),
       updatedAt: serverTimestamp(),
       ...(existing.exists() ? {} : { createdAt: serverTimestamp() }),
     },
@@ -102,19 +112,35 @@ export async function getBudgetEditorSeed(
   bookId: string,
   monthKey: string,
   categories: Category[]
-): Promise<{ amounts: Record<string, number>; isSet: boolean; seededFrom: "month" | "previous" | "legacy" | "none" }> {
+): Promise<{
+  amounts: Record<string, number>;
+  income?: number;
+  isSet: boolean;
+  seededFrom: "month" | "previous" | "legacy" | "none";
+}> {
   const current = await getMonthlyBudget(uid, bookId, monthKey);
-  if (current && Object.keys(current.amounts).length > 0) {
+  if (current && (Object.keys(current.amounts).length > 0 || current.income !== undefined)) {
     return {
       amounts: { ...current.amounts },
-      isSet: Object.values(current.amounts).some((v) => v > 0),
+      ...(current.income !== undefined ? { income: current.income } : {}),
+      isSet:
+        Object.values(current.amounts).some((v) => v > 0) ||
+        (current.income !== undefined && current.income > 0),
       seededFrom: "month",
     };
   }
 
   const prev = await getMonthlyBudget(uid, bookId, getPrevMonthKey(monthKey));
-  if (prev && Object.values(prev.amounts).some((v) => v > 0)) {
-    return { amounts: { ...prev.amounts }, isSet: false, seededFrom: "previous" };
+  if (
+    prev &&
+    (Object.values(prev.amounts).some((v) => v > 0) || prev.income !== undefined)
+  ) {
+    return {
+      amounts: { ...prev.amounts },
+      ...(prev.income !== undefined ? { income: prev.income } : {}),
+      isSet: false,
+      seededFrom: "previous",
+    };
   }
 
   const legacy = await getAllLimits(uid, bookId, categories);

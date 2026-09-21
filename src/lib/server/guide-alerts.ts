@@ -56,21 +56,31 @@ async function loadCategories(uid: string, bookId: string): Promise<Category[]> 
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Category);
 }
 
-async function loadMonthlyBudgetAmounts(
+async function loadMonthlyBudgetDoc(
   uid: string,
   bookId: string,
   monthKey: string
-): Promise<Record<string, number> | null> {
+): Promise<{ amounts: Record<string, number>; income?: number } | null> {
   const snap = await getAdminFirestore()
     .doc(`users/${uid}/books/${bookId}/monthlyBudgets/${monthKey}`)
     .get();
   if (!snap.exists) return null;
-  const amounts = (snap.data()?.amounts as Record<string, number>) ?? {};
+  const data = snap.data() ?? {};
+  const amounts = (data.amounts as Record<string, number>) ?? {};
   const cleaned: Record<string, number> = {};
   for (const [catId, amount] of Object.entries(amounts)) {
     if (typeof amount === "number" && amount > 0) cleaned[catId] = amount;
   }
-  return Object.keys(cleaned).length > 0 ? cleaned : null;
+  const incomeRaw = data.income;
+  const income =
+    typeof incomeRaw === "number" && Number.isFinite(incomeRaw) && incomeRaw >= 0
+      ? incomeRaw
+      : undefined;
+  if (Object.keys(cleaned).length === 0 && income === undefined) return null;
+  return {
+    amounts: cleaned,
+    ...(income !== undefined ? { income } : {}),
+  };
 }
 
 async function loadTxRange(
@@ -131,8 +141,8 @@ export async function buildGuideEmailDigest(
 
   const [
     categories,
-    currentAmounts,
-    nextAmounts,
+    currentBudget,
+    nextBudget,
     historyTxs,
     monthTxs,
     recurringSnap,
@@ -140,8 +150,8 @@ export async function buildGuideEmailDigest(
     guideStateSnap,
   ] = await Promise.all([
     loadCategories(uid, bookId),
-    loadMonthlyBudgetAmounts(uid, bookId, monthKey),
-    loadMonthlyBudgetAmounts(uid, bookId, nextMonthKey),
+    loadMonthlyBudgetDoc(uid, bookId, monthKey),
+    loadMonthlyBudgetDoc(uid, bookId, nextMonthKey),
     loadTxRange(uid, bookId, historyStart, monthEnd),
     loadTxRange(uid, bookId, monthStart, monthEnd),
     getAdminFirestore().collection(`users/${uid}/books/${bookId}/recurring`).get(),
@@ -157,19 +167,19 @@ export async function buildGuideEmailDigest(
 
   const recurringByCat: Record<string, number> = {};
   let hasActiveExpenseRecurring = false;
-  let monthlyIncome = 0;
+  let recurringIncome = 0;
   for (const r of recurrings.filter((x) => x.active)) {
     const monthly = toMonthly(r.amount, r.cadence);
     if (r.type === "expense") {
       hasActiveExpenseRecurring = true;
       recurringByCat[r.categoryId] = (recurringByCat[r.categoryId] ?? 0) + monthly;
     } else if (r.type === "income") {
-      monthlyIncome += monthly;
+      recurringIncome += monthly;
     }
   }
 
   const spentByCat = computeExpenseByCategory(monthTxs);
-  const budgetAmounts = currentAmounts ?? {};
+  const budgetAmounts = currentBudget?.amounts ?? {};
   let mismatchCategoryIds = findMismatchCategoryIds(
     categories.filter((c) => c.type === "expense").map((c) => c.id),
     spentByCat,
@@ -207,6 +217,11 @@ export async function buildGuideEmailDigest(
     if (ts?.toDate) snoozedUntil[id] = ts.toDate();
   }
 
+  const currentIncome =
+    currentBudget?.income !== undefined ? currentBudget.income : recurringIncome;
+  const nextIncome =
+    nextBudget?.income !== undefined ? nextBudget.income : recurringIncome;
+
   const reviewedRaw = guideState?.categoriesReviewedAt as Timestamp | undefined;
   const result = evaluateGuide({
     now,
@@ -215,8 +230,8 @@ export async function buildGuideEmailDigest(
     transactionMonthKeys: monthKeysFromDates(historyTxs.map((tx) => tx.date.toDate())),
     recentActivityAt,
     hasActiveExpenseRecurring,
-    currentBudgetSet: isGuideBudgetComplete(currentAmounts, monthlyIncome),
-    nextBudgetSet: isGuideBudgetComplete(nextAmounts, monthlyIncome),
+    currentBudgetSet: isGuideBudgetComplete(currentBudget?.amounts, currentIncome),
+    nextBudgetSet: isGuideBudgetComplete(nextBudget?.amounts, nextIncome),
     mismatchCategoryIds,
     overdueTaskCount,
     snoozedUntil,

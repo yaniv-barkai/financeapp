@@ -35,6 +35,8 @@ export interface MonthlyBudget {
   monthKey: string;
   /** categoryId → budget amount for that month */
   amounts: Record<string, number>;
+  /** Planned monthly income for this month (optional; UI falls back to recurring). */
+  income?: number;
   updatedAt?: Timestamp;
   createdAt?: Timestamp;
 }

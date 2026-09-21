@@ -135,6 +135,7 @@ export interface Translations {
   monthly_budget_loading: string;
   monthly_budget_total: string;
   monthly_budget_income: string;
+  monthly_budget_income_from_recurring: string;
   monthly_budget_left: string;
   monthly_budget_not_set: string;
   monthly_budget_seeded_previous: string;
@@ -653,6 +654,7 @@ const en: Translations = {
   monthly_budget_loading: "Loading budget…",
   monthly_budget_total: "Budgeted",
   monthly_budget_income: "Income",
+  monthly_budget_income_from_recurring: "From recurring — edit to override",
   monthly_budget_left: "Left",
   monthly_budget_not_set: "Budget not set for this month yet — edit and save",
   monthly_budget_seeded_previous: "Pre-filled from last month — review and save",
@@ -1164,6 +1166,7 @@ const he: Translations = {
   monthly_budget_loading: "טוען תקציב…",
   monthly_budget_total: "תוקצב",
   monthly_budget_income: "הכנסה",
+  monthly_budget_income_from_recurring: "מקבוע — ערכו כדי לדרוס",
   monthly_budget_left: "נותר",
   monthly_budget_not_set: "עדיין לא הוגדר תקציב לחודש זה — ערכו ושמרו",
   monthly_budget_seeded_previous: "מולא לפי החודש הקודם — בדקו ושמרו",

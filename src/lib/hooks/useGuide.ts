@@ -75,7 +75,7 @@ export function useGuide() {
 
         const recurringByCat: Record<string, number> = {};
         let hasActiveExpenseRecurring = false;
-        let monthlyIncome = 0;
+        let recurringIncome = 0;
         for (const r of recurrings.filter((x) => x.active)) {
           const monthly = toMonthlyRecurringAmount(r.amount, r.cadence);
           if (r.type === "expense") {
@@ -83,7 +83,7 @@ export function useGuide() {
             recurringByCat[r.categoryId] =
               (recurringByCat[r.categoryId] ?? 0) + monthly;
           } else if (r.type === "income") {
-            monthlyIncome += monthly;
+            recurringIncome += monthly;
           }
         }
 
@@ -98,8 +98,14 @@ export function useGuide() {
           budgetAmounts,
           recurringByCat
         );
-        const currentSet = isGuideBudgetComplete(currentBudget?.amounts, monthlyIncome);
-        const nextSet = isGuideBudgetComplete(nextBudget?.amounts, monthlyIncome);
+        const currentIncome =
+          currentBudget?.income !== undefined
+            ? currentBudget.income
+            : recurringIncome;
+        const nextIncome =
+          nextBudget?.income !== undefined ? nextBudget.income : recurringIncome;
+        const currentSet = isGuideBudgetComplete(currentBudget?.amounts, currentIncome);
+        const nextSet = isGuideBudgetComplete(nextBudget?.amounts, nextIncome);
 
         const transactionMonthKeys = monthKeysFromDates(
           historyTxs.map((tx) => tx.date.toDate())
