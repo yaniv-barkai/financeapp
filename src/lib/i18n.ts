@@ -13,12 +13,15 @@ export interface Translations {
   budget_all_categories: string;
   nav_recurring: string;
   nav_tasks: string;
+  nav_debts: string;
   nav_simulation: string;
   nav_settings: string;
   nav_admin: string;
   nav_sign_out: string;
   nav_search_placeholder: string;
   nav_brand: string;
+  nav_more: string;
+  nav_more_close: string;
 
   // Global search
   search_placeholder: string;
@@ -394,9 +397,101 @@ export interface Translations {
   tasks_status_open: string;
   tasks_status_done: string;
 
+  // Debts & snowball
+  debts_title: string;
+  debts_subtitle: string;
+  debts_add: string;
+  debts_edit_title: string;
+  debts_new_title: string;
+  debts_name: string;
+  debts_name_placeholder: string;
+  debts_balance: string;
+  debts_monthly_payment: string;
+  debts_monthly_payment_hint: string;
+  debts_monthly_badge: string;
+  debts_pay_first: string;
+  debts_pay_first_hint: string;
+  debts_pay_first_badge: string;
+  debts_note: string;
+  debts_note_placeholder: string;
+  debts_category: string;
+  debts_status: string;
+  debts_status_open: string;
+  debts_status_paid: string;
+  debts_tab_open: string;
+  debts_tab_paid: string;
+  debts_tab_all: string;
+  debts_no_items: string;
+  debts_attach_transactions: string;
+  debts_attached: string;
+  debts_search_transactions: string;
+  debts_no_matching_transactions: string;
+  debts_recognition_merchants: string;
+  debts_recognition_hint: string;
+  debts_save: string;
+  debts_saving: string;
+  debts_create: string;
+  debts_cancel: string;
+  debts_delete: string;
+  debts_delete_confirm_title: string;
+  debts_delete_confirm: string;
+  debts_saved: string;
+  debts_save_error: string;
+  debts_deleted: string;
+  debts_mark_paid: string;
+  debts_mark_open: string;
+  debts_celebration_title: string;
+  debts_recurring_synced: string;
+  debts_load_error: string;
+  debts_loading: string;
+
+  // Debt payoff (simulation tab)
+  payoff_subtitle: string;
+  payoff_manage_debts: string;
+  payoff_no_debts: string;
+  payoff_loading: string;
+  payoff_load_error: string;
+  payoff_settings_title: string;
+  payoff_available_monthly: string;
+  payoff_available_monthly_hint: string;
+  payoff_use_budget_net: string;
+  payoff_use_budget_done: string;
+  payoff_use_budget_empty: string;
+  payoff_ef_months: string;
+  payoff_ef_months_hint: string;
+  payoff_ef_income: string;
+  payoff_ef_income_hint: string;
+  payoff_one_time: string;
+  payoff_one_time_hint: string;
+  payoff_one_time_add: string;
+  payoff_one_time_label: string;
+  payoff_one_time_label_placeholder: string;
+  payoff_one_time_amount: string;
+  payoff_one_time_month: string;
+  payoff_one_time_remove: string;
+  payoff_save_plan: string;
+  payoff_saving: string;
+  payoff_plan_saved: string;
+  payoff_plan_save_error: string;
+  payoff_results_title: string;
+  payoff_step1: string;
+  payoff_step2: string;
+  payoff_step3: string;
+  payoff_total: string;
+  payoff_months: string;
+  payoff_months_done: string;
+  payoff_stuck_mins: string;
+  payoff_stuck_max: string;
+  payoff_ef_target: string;
+  payoff_payoff_at: string;
+  payoff_no_available: string;
+  payoff_per_debt: string;
+
   // Simulation page
   simulation_title: string;
   simulation_subtitle: string;
+  simulation_tab_budget: string;
+  simulation_tab_payoff: string;
   simulation_loading: string;
   simulation_load_error: string;
   simulation_save: string;
@@ -580,12 +675,15 @@ const en: Translations = {
   budget_all_categories: "All Categories",
   nav_recurring: "Recurring",
   nav_tasks: "Tasks",
+  nav_debts: "Debts",
   nav_simulation: "Simulation",
   nav_settings: "Settings",
   nav_admin: "Admin",
   nav_sign_out: "Sign out",
   nav_search_placeholder: "Search…",
   nav_brand: "FinanceApp",
+  nav_more: "More",
+  nav_more_close: "Close",
 
   search_placeholder: "Search transactions…",
   search_no_results: "No transactions found.",
@@ -952,9 +1050,106 @@ const en: Translations = {
   tasks_status_open: "Open",
   tasks_status_done: "Done",
 
+  debts_title: "Debts",
+  debts_subtitle:
+    "Track what you owe — bank loans, money from family or friends, and unpaid bills.",
+  debts_add: "Add debt",
+  debts_edit_title: "Edit debt",
+  debts_new_title: "New debt",
+  debts_name: "Name",
+  debts_name_placeholder: "e.g. Bank loan / Friend / Unpaid bill",
+  debts_balance: "Balance",
+  debts_monthly_payment: "Monthly payment",
+  debts_monthly_payment_hint:
+    "If set, a recurring expense is created or updated automatically.",
+  debts_monthly_badge: "Monthly payment",
+  debts_pay_first: "Pay first",
+  debts_pay_first_hint:
+    "Clear this debt before others in the pay-off plan (Simulation).",
+  debts_pay_first_badge: "Pay first",
+  debts_note: "Note",
+  debts_note_placeholder: "Optional details",
+  debts_category: "Category",
+  debts_status: "Status",
+  debts_status_open: "Open",
+  debts_status_paid: "Paid",
+  debts_tab_open: "Open",
+  debts_tab_paid: "Paid",
+  debts_tab_all: "All",
+  debts_no_items: "No debts yet. Add bank loans, family loans, or unpaid bills.",
+  debts_attach_transactions: "Attach transactions",
+  debts_attached: "Attached",
+  debts_search_transactions: "Search merchant or note…",
+  debts_no_matching_transactions: "No matching transactions.",
+  debts_recognition_merchants: "Recognition merchants",
+  debts_recognition_hint:
+    "Attached merchants are remembered so future imports categorize to Debts.",
+  debts_save: "Save",
+  debts_saving: "Saving…",
+  debts_create: "Create",
+  debts_cancel: "Cancel",
+  debts_delete: "Delete",
+  debts_delete_confirm_title: "Delete debt?",
+  debts_delete_confirm:
+    "The linked recurring payment will be deactivated. Transactions are not deleted.",
+  debts_saved: "Debt saved",
+  debts_save_error: "Could not save debt",
+  debts_deleted: "Debt deleted",
+  debts_mark_paid: "Mark paid",
+  debts_mark_open: "Reopen",
+  debts_celebration_title: "Debt paid off!",
+  debts_recurring_synced: "Monthly payment synced to recurring",
+  debts_load_error: "Could not load debts",
+  debts_loading: "Loading debts…",
+
+  payoff_subtitle:
+    "See how long it takes to clear your debts and build a small emergency cushion.",
+  payoff_manage_debts: "Manage debts",
+  payoff_no_debts: "No open debts yet. Add them on the Debts page first.",
+  payoff_loading: "Loading…",
+  payoff_load_error: "Could not load the pay-off plan",
+  payoff_settings_title: "Your numbers",
+  payoff_available_monthly: "Available each month",
+  payoff_available_monthly_hint:
+    "How much you can put toward debts and savings each month. Change this number to see how the timeline changes.",
+  payoff_use_budget_net: "Use net from Budget tab",
+  payoff_use_budget_done: "Set from Budget tab net",
+  payoff_use_budget_empty: "Budget tab has no positive net yet",
+  payoff_ef_months: "Emergency cushion (months)",
+  payoff_ef_months_hint: "Recommended: 3 to 6 months of income.",
+  payoff_ef_income: "Monthly income for cushion",
+  payoff_ef_income_hint: "Target = months × this amount.",
+  payoff_one_time: "One-time money",
+  payoff_one_time_hint: "e.g. selling something — applied once after the months you set.",
+  payoff_one_time_add: "Add",
+  payoff_one_time_label: "What",
+  payoff_one_time_label_placeholder: "e.g. Sell old phone",
+  payoff_one_time_amount: "Amount",
+  payoff_one_time_month: "After months",
+  payoff_one_time_remove: "Remove",
+  payoff_save_plan: "Save",
+  payoff_saving: "Saving…",
+  payoff_plan_saved: "Plan saved",
+  payoff_plan_save_error: "Could not save plan",
+  payoff_results_title: "How long each step takes",
+  payoff_step1: "Step 1 — small debts first",
+  payoff_step2: "Step 2 — emergency cushion",
+  payoff_step3: "Step 3 — remaining debts",
+  payoff_total: "Total",
+  payoff_months: "{n} mo",
+  payoff_months_done: "Done",
+  payoff_stuck_mins: "Available money is too low to cover monthly payments.",
+  payoff_stuck_max: "Could not finish within the projection limit.",
+  payoff_ef_target: "Cushion target",
+  payoff_payoff_at: "Month {n}",
+  payoff_no_available: "Enter how much is available each month to see the timeline.",
+  payoff_per_debt: "Per debt",
+
   simulation_title: "Simulation",
   simulation_subtitle:
-    "Play with target income and expenses without changing your real budget.",
+    "Play with your budget, or see how long paying off debts would take — without changing real data.",
+  simulation_tab_budget: "Budget",
+  simulation_tab_payoff: "Pay off debts",
   simulation_loading: "Loading simulation…",
   simulation_load_error: "Could not load simulation",
   simulation_save: "Save",
@@ -1134,12 +1329,15 @@ const he: Translations = {
   budget_all_categories: "כל הקטגוריות",
   nav_recurring: "תשלומים קבועים",
   nav_tasks: "משימות",
+  nav_debts: "חובות",
   nav_simulation: "סימולציה",
   nav_settings: "הגדרות",
   nav_admin: "ניהול",
   nav_sign_out: "התנתק",
   nav_search_placeholder: "חיפוש…",
   nav_brand: "FinanceApp",
+  nav_more: "עוד",
+  nav_more_close: "סגור",
 
   search_placeholder: "חפש עסקאות…",
   search_no_results: "לא נמצאו עסקאות.",
@@ -1506,8 +1704,106 @@ const he: Translations = {
   tasks_status_open: "פתוחה",
   tasks_status_done: "בוצעה",
 
+  debts_title: "חובות",
+  debts_subtitle:
+    "עקבו אחרי מה שאתם חייבים — הלוואות בנק, כסף ממשפחה או חברים, וחשבונות שלא שולמו.",
+  debts_add: "הוסף חוב",
+  debts_edit_title: "עריכת חוב",
+  debts_new_title: "חוב חדש",
+  debts_name: "שם",
+  debts_name_placeholder: "לדוגמה: הלוואת בנק / חבר / חשבון שלא שולם",
+  debts_balance: "יתרה",
+  debts_monthly_payment: "תשלום חודשי",
+  debts_monthly_payment_hint:
+    "אם מוגדר, נוצר או מתעדכן תשלום קבוע אוטומטית.",
+  debts_monthly_badge: "תשלום חודשי",
+  debts_pay_first: "לשלם קודם",
+  debts_pay_first_hint:
+    "לסגור את החוב הזה לפני אחרים בתוכנית הסגירה (בסימולציה).",
+  debts_pay_first_badge: "לשלם קודם",
+  debts_note: "הערה",
+  debts_note_placeholder: "פרטים אופציונליים",
+  debts_category: "קטגוריה",
+  debts_status: "סטטוס",
+  debts_status_open: "פתוח",
+  debts_status_paid: "שולם",
+  debts_tab_open: "פתוחים",
+  debts_tab_paid: "שולמו",
+  debts_tab_all: "הכל",
+  debts_no_items: "אין חובות עדיין. הוסיפו הלוואות בנק, משפחה או חשבונות שלא שולמו.",
+  debts_attach_transactions: "צרף עסקאות",
+  debts_attached: "מצורפות",
+  debts_search_transactions: "חפש ספק או הערה…",
+  debts_no_matching_transactions: "לא נמצאו עסקאות תואמות.",
+  debts_recognition_merchants: "ספקים לזיהוי",
+  debts_recognition_hint:
+    "ספקים מצורפים נשמרים כדי שייבוא עתידי יסווג אוטומטית לחובות.",
+  debts_save: "שמור",
+  debts_saving: "שומר…",
+  debts_create: "צור",
+  debts_cancel: "ביטול",
+  debts_delete: "מחק",
+  debts_delete_confirm_title: "למחוק חוב?",
+  debts_delete_confirm:
+    "התשלום הקבוע המקושר יושבת. עסקאות לא יימחקו.",
+  debts_saved: "החוב נשמר",
+  debts_save_error: "לא ניתן לשמור את החוב",
+  debts_deleted: "החוב נמחק",
+  debts_mark_paid: "סמן כשולם",
+  debts_mark_open: "פתח מחדש",
+  debts_celebration_title: "החוב נסגר!",
+  debts_recurring_synced: "התשלום החודשי סונכרן לקבועים",
+  debts_load_error: "לא ניתן לטעון חובות",
+  debts_loading: "טוען חובות…",
+
+  payoff_subtitle:
+    "ראו כמה זמן לוקח לסגור את החובות ולבנות כרית ביטחון קטנה.",
+  payoff_manage_debts: "ניהול חובות",
+  payoff_no_debts: "אין חובות פתוחים. הוסיפו אותם קודם בעמוד החובות.",
+  payoff_loading: "טוען…",
+  payoff_load_error: "לא ניתן לטעון את תוכנית הסגירה",
+  payoff_settings_title: "המספרים שלכם",
+  payoff_available_monthly: "פנוי בכל חודש",
+  payoff_available_monthly_hint:
+    "כמה אפשר להפנות לחובות ולחיסכון בכל חודש. שנו את המספר כדי לראות איך הזמן משתנה.",
+  payoff_use_budget_net: "השתמש בנטו מלשונית התקציב",
+  payoff_use_budget_done: "הוגדר לפי נטו לשונית התקציב",
+  payoff_use_budget_empty: "בלשונית התקציב אין עדיין נטו חיובי",
+  payoff_ef_months: "כרית ביטחון (חודשים)",
+  payoff_ef_months_hint: "מומלץ: 3 עד 6 חודשי הכנסה.",
+  payoff_ef_income: "הכנסה חודשית לכרית",
+  payoff_ef_income_hint: "יעד = מספר חודשים × סכום זה.",
+  payoff_one_time: "כסף חד־פעמי",
+  payoff_one_time_hint: "למשל מכירת משהו — נכנס פעם אחת אחרי מספר החודשים שתגדירו.",
+  payoff_one_time_add: "הוסף",
+  payoff_one_time_label: "מה",
+  payoff_one_time_label_placeholder: "לדוגמה: מכירת טלפון ישן",
+  payoff_one_time_amount: "סכום",
+  payoff_one_time_month: "אחרי חודשים",
+  payoff_one_time_remove: "הסר",
+  payoff_save_plan: "שמור",
+  payoff_saving: "שומר…",
+  payoff_plan_saved: "התוכנית נשמרה",
+  payoff_plan_save_error: "לא ניתן לשמור את התוכנית",
+  payoff_results_title: "כמה זמן לוקח כל שלב",
+  payoff_step1: "שלב 1 — חובות קטנים קודם",
+  payoff_step2: "שלב 2 — כרית ביטחון",
+  payoff_step3: "שלב 3 — שאר החובות",
+  payoff_total: "סה״כ",
+  payoff_months: "{n} ח׳",
+  payoff_months_done: "הושלם",
+  payoff_stuck_mins: "הסכום הפנוי נמוך מדי לכיסוי התשלומים החודשיים.",
+  payoff_stuck_max: "לא ניתן להשלים בתוך מגבלת הסימולציה.",
+  payoff_ef_target: "יעד כרית הביטחון",
+  payoff_payoff_at: "חודש {n}",
+  payoff_no_available: "הזינו כמה פנוי בכל חודש כדי לראות את לוח הזמנים.",
+  payoff_per_debt: "לפי חוב",
+
   simulation_title: "סימולציה",
-  simulation_subtitle: "שחקו עם יעדי הכנסה והוצאה בלי לשנות את התקציב האמיתי.",
+  simulation_subtitle:
+    "שחקו עם התקציב, או בדקו כמה זמן ייקח לסגור חובות — בלי לשנות נתונים אמיתיים.",
+  simulation_tab_budget: "תקציב",
+  simulation_tab_payoff: "סגירת חובות",
   simulation_loading: "טוען סימולציה…",
   simulation_load_error: "לא ניתן לטעון את הסימולציה",
   simulation_save: "שמור",

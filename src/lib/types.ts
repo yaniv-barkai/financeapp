@@ -59,6 +59,8 @@ export interface Transaction {
   /** Full purchase amount when `amount` is a single installment. */
   originalAmount?: number;
   recurringId?: string;
+  /** Linked debt when this payment was attached/recognized */
+  debtId?: string;
   source?: TransactionSource;
   sourceKey?: string;
   createdAt: Timestamp;
@@ -120,6 +122,51 @@ export interface Simulation {
   amounts: Record<string, number>;
   whatIfCategories: SimulationWhatIfCategory[];
   whatIfAmounts: Record<string, number>;
+  updatedAt?: Timestamp;
+}
+
+export type DebtStatus = "open" | "paid";
+
+/** Real obligation: bank loan, family loan, unpaid bill, etc. */
+export interface Debt {
+  id: string;
+  name: string;
+  balance: number;
+  /** 0 = no fixed monthly obligation */
+  monthlyPayment: number;
+  /** User forces this debt into snowball phase 1 */
+  forcePhase1: boolean;
+  /** Linked auto-managed recurring (expense), if monthlyPayment > 0 */
+  recurringId?: string;
+  /** Sample / payment txs (like Task.transactionIds) */
+  transactionIds: string[];
+  /** Merchants used to auto-recognize future txs (normalized) */
+  matchMerchants: string[];
+  categoryId?: string;
+  note?: string;
+  status: DebtStatus;
+  createdAt: Timestamp;
+}
+
+export interface SnowballOneTimeIncome {
+  id: string;
+  label: string;
+  amount: number;
+  /** Apply once when projection month equals this (0 = first month) */
+  applyAfterMonths: number;
+}
+
+/** Snowball simulator settings (one doc per book). */
+export interface SnowballPlan {
+  /** Nominal monthly surplus for “play with time” */
+  nominalMonthlyIncome: number;
+  /** Extra monthly cash when nominal is unset (or unused if nominal > 0) */
+  monthlyExtra: number;
+  oneTimeIncomes: SnowballOneTimeIncome[];
+  /** Emergency fund size in months of income; default 3 */
+  emergencyFundMonths: number;
+  /** Monthly income base for EF target */
+  monthlyIncomeForFund: number;
   updatedAt?: Timestamp;
 }
 

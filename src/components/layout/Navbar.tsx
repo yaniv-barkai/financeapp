@@ -15,6 +15,7 @@ import {
   Wallet,
   PieChart,
   CheckSquare,
+  CreditCard,
   Shield,
   FlaskConical,
 } from "lucide-react";
@@ -42,6 +43,7 @@ export function Navbar() {
       { href: "/categories", label: t.nav_categories, icon: BarChart3 },
       { href: "/recurring", label: t.nav_recurring, icon: RefreshCw },
       { href: "/tasks", label: t.nav_tasks, icon: CheckSquare },
+      { href: "/debts", label: t.nav_debts, icon: CreditCard },
       { href: "/simulation", label: t.nav_simulation, icon: FlaskConical },
       { href: "/settings", label: t.nav_settings, icon: Settings },
     ];
