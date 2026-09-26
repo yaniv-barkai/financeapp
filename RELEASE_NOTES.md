@@ -2,6 +2,12 @@
 
 Newest first. Format: `vMAJOR.MINOR` (two-digit minor). See `.cursor/rules/versioning.mdc`.
 
+## v1.04 — 2026-09-26
+
+- Mobile navigation redesigned: primary tabs (Dashboard, Transactions, Budget, Debts) plus a More sheet for the rest, so labels no longer overflow or collide on small screens.
+- Tighter mobile chrome (book switcher, headers, padding) and horizontal overflow guardrails so content stays within the viewport.
+- Simulation page respects Hebrew RTL (including the recurring / last month / 3-month avg lines).
+
 ## v1.03 — 2026-09-26
 
 - Full-screen celebration when you mark a debt as paid (confetti + big “Debt paid off!” moment).

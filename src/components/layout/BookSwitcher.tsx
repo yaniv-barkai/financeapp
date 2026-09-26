@@ -70,13 +70,15 @@ export function BookSwitcher() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="gap-2 h-9 px-3">
+          <Button variant="outline" className="gap-1.5 sm:gap-2 h-9 px-2 sm:px-3 max-w-full">
             <span
               className="inline-block w-3 h-3 rounded-full flex-shrink-0"
               style={{ backgroundColor: activeBook.color }}
             />
-            <span className="font-medium max-w-[120px] truncate">{activeBook.name}</span>
-            <ChevronDown className="h-4 w-4 opacity-50" />
+            <span className="font-medium max-w-[72px] sm:max-w-[120px] truncate">
+              {activeBook.name}
+            </span>
+            <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-52">

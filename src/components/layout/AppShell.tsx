@@ -20,13 +20,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <GuideProvider>
-      <div className="min-h-screen">
+      <div className="min-h-screen overflow-x-hidden">
         <Navbar />
         <GlobalSearch />
-        <main className="sm:ps-56 pt-14 pb-20 sm:pb-6 min-h-screen">
+        <main className="sm:ps-56 pt-14 pb-20 sm:pb-6 min-h-screen overflow-x-hidden">
           <div
             className={cn(
-              "mx-auto p-4 sm:p-6",
+              "mx-auto p-3 sm:p-6 min-w-0",
               isImport || isAdmin ? "max-w-none w-full" : "max-w-5xl"
             )}
           >

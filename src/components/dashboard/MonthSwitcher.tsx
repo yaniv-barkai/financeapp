@@ -24,22 +24,22 @@ export function MonthSwitcher() {
   const NextIcon = isRtl ? ChevronLeft : ChevronRight;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
       <Button
         variant="outline"
         size="icon"
-        className="h-8 w-8"
+        className="h-8 w-8 shrink-0"
         onClick={() => setActiveMonth(getMonthKey(subMonths(date, 1)))}
       >
         <PrevIcon className="h-4 w-4" />
       </Button>
-      <span className="font-semibold text-sm min-w-[120px] text-center">
+      <span className="font-semibold text-sm min-w-0 sm:min-w-[120px] text-center truncate">
         {monthLabel}
       </span>
       <Button
         variant="outline"
         size="icon"
-        className="h-8 w-8"
+        className="h-8 w-8 shrink-0"
         disabled={isCurrentMonth}
         onClick={() => setActiveMonth(getMonthKey(addMonths(date, 1)))}
       >
