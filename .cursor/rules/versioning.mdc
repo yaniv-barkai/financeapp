@@ -1,0 +1,42 @@
+---
+description: Bump app version and release notes on every feature or fix
+alwaysApply: true
+---
+
+# Versioning & Release Notes
+
+Every feature or bug fix that changes the product MUST bump the app version and document it. Do this in the same change set as the work — do not leave versioning for later.
+
+## Version format
+
+- Display / release format: `vMAJOR.MINOR` with a two-digit minor (`v1.00`, `v1.01`, `v1.02`, …).
+- Start baseline: `v1.00`.
+- **Feature or fix**: bump `MINOR` by 1 (`v1.00` → `v1.01`).
+- **Breaking change or major milestone** (only when clearly warranted): bump `MAJOR` and reset `MINOR` to `00` (`v1.14` → `v2.00`).
+- Do not skip numbers. Do not bump for pure docs/chore that do not change app behavior, unless the user asks.
+
+## Files to update (all required on a bump)
+
+1. `src/lib/version.ts` — set `APP_VERSION` to the new string without the `v` prefix (e.g. `"1.01"`).
+2. `package.json` — set `"version"` to semver `MAJOR.MINOR.0` (e.g. `1.01` → `"1.1.0"`, `1.00` → `"1.0.0"`).
+3. `RELEASE_NOTES.md` — prepend a new section at the top (newest first).
+
+## Release notes entry template
+
+```markdown
+## v1.01 — YYYY-MM-DD
+
+- Short user-facing bullet of what changed and why it matters.
+- Another bullet if needed.
+```
+
+- Write for the product owner: clear, concrete, no internal jargon unless necessary.
+- Prefer “what you can do now” / “what was fixed” over file lists.
+- Group related bullets under one version; one bump per shipped change set.
+- If the current version is still unpushed / unreleased, fold follow-up fixes into that same version entry instead of bumping again for every small fix.
+
+## Checklist before finishing a feature/fix
+
+- [ ] Version bumped in `src/lib/version.ts` and `package.json`
+- [ ] Matching entry added at the top of `RELEASE_NOTES.md`
+- [ ] Version strings agree (`1.01` ↔ `1.1.0`)
