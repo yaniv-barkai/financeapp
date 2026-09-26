@@ -106,33 +106,32 @@ describe("detectRecurringSuggestions", () => {
     ];
     const result = detectRecurringSuggestions(txs, [], {
       anchorMonthKey: "2026-09",
-      minMonthsMatched: 3,
     });
     assert.equal(result.length, 0);
   });
 
-  it("suggests when present in 2 of 3 months by default", () => {
+  it("rejects one-offs that only appear in 2 of 3 months by default", () => {
     const txs = [
       tx({ date: new Date(2026, 6, 12), amount: 49.9, merchantDisplay: "Netflix" }),
       tx({ date: new Date(2026, 8, 12), amount: 49.9, merchantDisplay: "Netflix" }),
     ];
     const result = detectRecurringSuggestions(txs, [], {
       anchorMonthKey: "2026-09",
+    });
+    assert.equal(result.length, 0);
+  });
+
+  it("can allow 2 of 3 months when configured", () => {
+    const txs = [
+      tx({ date: new Date(2026, 6, 12), amount: 49.9, merchantDisplay: "Netflix" }),
+      tx({ date: new Date(2026, 8, 12), amount: 49.9, merchantDisplay: "Netflix" }),
+    ];
+    const result = detectRecurringSuggestions(txs, [], {
+      anchorMonthKey: "2026-09",
+      minMonthsMatched: 2,
     });
     assert.equal(result.length, 1);
     assert.equal(result[0].monthsMatched.length, 2);
-  });
-
-  it("can require all 3 months when configured", () => {
-    const txs = [
-      tx({ date: new Date(2026, 6, 12), amount: 49.9, merchantDisplay: "Netflix" }),
-      tx({ date: new Date(2026, 8, 12), amount: 49.9, merchantDisplay: "Netflix" }),
-    ];
-    const result = detectRecurringSuggestions(txs, [], {
-      anchorMonthKey: "2026-09",
-      minMonthsMatched: 3,
-    });
-    assert.equal(result.length, 0);
   });
 
   it("ignores income and already-linked recurring transactions", () => {
@@ -166,7 +165,6 @@ describe("detectRecurringSuggestions", () => {
     ];
     const result = detectRecurringSuggestions(txs, [], {
       anchorMonthKey: "2026-09",
-      minMonthsMatched: 3,
     });
     assert.equal(result.length, 0);
   });
@@ -197,11 +195,22 @@ describe("detectRecurringSuggestions", () => {
     ];
     const result = detectRecurringSuggestions(txs, [], {
       anchorMonthKey: "2026-09",
-      minMonthsMatched: 3,
     });
     const match = result.find((s) => s.amount === 14.9 && s.monthsMatched.length === 3);
     assert.ok(match, "expected a $14.90 ITUNES suggestion across 3 months");
     assert.ok(match!.dayOfMonth >= 14 && match!.dayOfMonth <= 16);
+  });
+
+  it("does not suggest a single one-off even when amount/merchant match another month loosely", () => {
+    const txs = [
+      tx({ date: new Date(2026, 6, 12), amount: 87.5, merchantDisplay: "Super" }),
+      tx({ date: new Date(2026, 7, 5), amount: 120, merchantDisplay: "Super" }),
+      tx({ date: new Date(2026, 8, 20), amount: 45, merchantDisplay: "Super" }),
+    ];
+    const result = detectRecurringSuggestions(txs, [], {
+      anchorMonthKey: "2026-09",
+    });
+    assert.equal(result.length, 0);
   });
 
   it("does not let a coincidental day series block the real recurring one", () => {
@@ -239,7 +248,7 @@ describe("detectRecurringSuggestions", () => {
     assert.deepEqual(amounts, [9.9, 14.9]);
   });
 
-  it("clusters slight amount differences for the same merchant", () => {
+  it("requires the exact same amount — slight differences do not cluster", () => {
     const txs = [
       tx({ date: new Date(2026, 6, 12), amount: 49.9, merchantDisplay: "Netflix" }),
       tx({ date: new Date(2026, 7, 12), amount: 49.91, merchantDisplay: "Netflix" }),
@@ -248,7 +257,20 @@ describe("detectRecurringSuggestions", () => {
     const result = detectRecurringSuggestions(txs, [], {
       anchorMonthKey: "2026-09",
     });
-    assert.equal(result.length, 1);
+    // 49.90 only in Jul+Sep; 49.91 only once → nothing reaches 3 months
+    assert.equal(result.length, 0);
+  });
+
+  it("does not group similar but different amounts at the same merchant", () => {
+    const txs = [
+      tx({ date: new Date(2026, 6, 5), amount: 100, merchantDisplay: "Gym" }),
+      tx({ date: new Date(2026, 7, 5), amount: 102, merchantDisplay: "Gym" }),
+      tx({ date: new Date(2026, 8, 5), amount: 100, merchantDisplay: "Gym" }),
+    ];
+    const result = detectRecurringSuggestions(txs, [], {
+      anchorMonthKey: "2026-09",
+    });
+    assert.equal(result.length, 0);
   });
 
   it("skips dismissed fingerprints", () => {

@@ -5,9 +5,6 @@ import { getMonthKey, normalizemerchant } from "./utils";
 /** Day-of-month window: same day or up to 3 days before/after. */
 export const RECURRING_DAY_TOLERANCE = 3;
 
-/** Relative amount tolerance for floating amounts / slight price changes. */
-export const RECURRING_AMOUNT_TOLERANCE = 0.02;
-
 export interface RecurringSuggestion {
   /** Stable key for dismiss / dedupe: merchant|roundedAmount|anchorDay */
   fingerprint: string;
@@ -29,14 +26,13 @@ function txMerchantKey(tx: Transaction): string {
   return "";
 }
 
-function amountsClose(a: number, b: number): boolean {
-  if (a === b) return true;
-  const max = Math.max(Math.abs(a), Math.abs(b), 1);
-  return Math.abs(a - b) / max <= RECURRING_AMOUNT_TOLERANCE;
-}
-
+/** Exact amount to the cent — one-offs with similar totals must not cluster. */
 function amountBucket(amount: number): number {
   return Math.round(amount * 100) / 100;
+}
+
+function sameAmount(a: number, b: number): boolean {
+  return amountBucket(a) === amountBucket(b);
 }
 
 /** Absolute day-of-month distance. */
@@ -92,7 +88,7 @@ function matchesExistingRecurring(
 ): boolean {
   return existing.some((r) => {
     if (r.type !== "expense" || !r.active) return false;
-    if (!amountsClose(r.amount, amount)) return false;
+    if (!sameAmount(r.amount, amount)) return false;
     const rMerchant = r.merchantDisplay?.trim()
       ? normalizemerchant(r.merchantDisplay)
       : "";
@@ -190,11 +186,15 @@ export function findBestDaySeries(
 /**
  * Detect recurring expense patterns in the last `monthsBack` months.
  *
- * For noisy merchants (e.g. many ITUNES one-offs), groups by amount and
- * searches for a day-of-month anchor (±3 days) so only the repeating
- * subset is suggested. Multiple series per merchant are allowed.
+ * A suggestion requires the same merchant, the exact same amount (to the
+ * cent), and a day-of-month within ±3 days — across enough months that a
+ * one-off purchase cannot qualify.
  *
- * Default: must appear in at least 2 of the lookback months (configurable).
+ * For noisy merchants (e.g. many ITUNES one-offs), groups by exact amount
+ * and searches for a day-of-month anchor so only the repeating subset is
+ * suggested. Multiple series per merchant are allowed.
+ *
+ * Default: must appear in all lookback months (3 of 3).
  */
 export function detectRecurringSuggestions(
   transactions: Transaction[],
@@ -202,13 +202,13 @@ export function detectRecurringSuggestions(
   options: {
     anchorMonthKey: string;
     monthsBack?: number;
-    /** Minimum months a series must appear in (default 2). */
+    /** Minimum months a series must appear in (default = monthsBack). */
     minMonthsMatched?: number;
     dismissedFingerprints?: Iterable<string>;
   }
 ): RecurringSuggestion[] {
   const monthsBack = options.monthsBack ?? 3;
-  const minMonths = options.minMonthsMatched ?? 2;
+  const minMonths = options.minMonthsMatched ?? monthsBack;
   const monthKeys = monthKeysLookingBack(options.anchorMonthKey, monthsBack);
   const monthKeySet = new Set(monthKeys);
   const dismissed = new Set(options.dismissedFingerprints ?? []);
@@ -232,18 +232,10 @@ export function detectRecurringSuggestions(
   const seenFingerprints = new Set<string>();
 
   for (const [merchantNormalized, merchantTxs] of byMerchant) {
-    // Bucket by amount (with soft membership via amountsClose when seeding buckets)
+    // Exact amount only — similar grocery totals must not merge
     const amountGroups = new Map<number, Transaction[]>();
     for (const tx of merchantTxs) {
-      const bucket = amountBucket(tx.amount);
-      // Attach to an existing close bucket if one exists
-      let target = bucket;
-      for (const existing of amountGroups.keys()) {
-        if (amountsClose(existing, tx.amount)) {
-          target = existing;
-          break;
-        }
-      }
+      const target = amountBucket(tx.amount);
       const list = amountGroups.get(target) ?? [];
       list.push(tx);
       amountGroups.set(target, list);
@@ -331,8 +323,8 @@ export function detectRecurringSuggestions(
 
 /** localStorage helpers for dismissed suggestion fingerprints (per book). */
 export function dismissedSuggestionsStorageKey(bookId: string): string {
-  // v2: invalidate dismissals from earlier matcher versions
-  return `recurring-suggestions-dismissed:v2:${bookId}`;
+  // v3: exact-amount matcher (invalidate soft-tolerance dismissals)
+  return `recurring-suggestions-dismissed:v3:${bookId}`;
 }
 
 export function loadDismissedSuggestions(bookId: string): string[] {

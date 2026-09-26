@@ -2,6 +2,10 @@
 
 Newest first. Format: `vMAJOR.MINOR` (two-digit minor). See `.cursor/rules/versioning.mdc`.
 
+## v1.05 — 2026-09-26
+
+- Recurring suggestions are stricter: only the same business, exact same amount, and day of month within ±3 days — and it must appear in all of the last 3 months — so one-off purchases are no longer suggested.
+
 ## v1.04 — 2026-09-26
 
 - Mobile navigation redesigned: primary tabs (Dashboard, Transactions, Budget, Debts) plus a More sheet for the rest, so labels no longer overflow or collide on small screens.
