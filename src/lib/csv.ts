@@ -96,7 +96,7 @@ export function isChargedAmountColumn(header: string | null | undefined): boolea
 
 export type DateFormat = "auto" | "DMY" | "MDY" | "YMD";
 
-function parseDateWithFormat(raw: string, format: DateFormat): Date {
+export function parseDateWithFormat(raw: string, format: DateFormat): Date {
   if (format === "auto") {
     const d = new Date(raw);
     return isNaN(d.getTime()) ? new Date() : d;

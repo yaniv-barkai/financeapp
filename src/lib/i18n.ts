@@ -13,6 +13,7 @@ export interface Translations {
   budget_all_categories: string;
   nav_recurring: string;
   nav_tasks: string;
+  nav_simulation: string;
   nav_settings: string;
   nav_admin: string;
   nav_sign_out: string;
@@ -280,6 +281,8 @@ export interface Translations {
   import_upload_title: string;
   import_upload_subtitle: string;
   import_choose_file: string;
+  import_detected_format: string;
+  import_xlsx_unsupported: string;
   import_map_title: string;
   import_map_detected: string;
   import_date_col: string;
@@ -306,6 +309,8 @@ export interface Translations {
   import_col_category: string;
   import_col_book: string;
   import_col_tags: string;
+  import_duplicates: string;
+  import_duplicate_badge: string;
   import_auto_hint: string;
   import_importing: string;
   import_done_title: string;
@@ -388,6 +393,41 @@ export interface Translations {
   tasks_delete_confirm: string;
   tasks_status_open: string;
   tasks_status_done: string;
+
+  // Simulation page
+  simulation_title: string;
+  simulation_subtitle: string;
+  simulation_loading: string;
+  simulation_load_error: string;
+  simulation_save: string;
+  simulation_saving: string;
+  simulation_saved: string;
+  simulation_save_error: string;
+  simulation_reset: string;
+  simulation_reset_confirm_title: string;
+  simulation_reset_confirm: string;
+  simulation_cancel: string;
+  simulation_add: string;
+  simulation_add_whatif: string;
+  simulation_add_whatif_title: string;
+  simulation_whatif_name: string;
+  simulation_whatif_name_placeholder: string;
+  simulation_whatif_type: string;
+  simulation_whatif_hint: string;
+  simulation_whatif_badge: string;
+  simulation_remove_whatif: string;
+  simulation_no_categories: string;
+  simulation_section_income: string;
+  simulation_section_expenses: string;
+  simulation_col_category: string;
+  simulation_col_recurring: string;
+  simulation_col_prev: string;
+  simulation_col_avg3: string;
+  simulation_col_sim: string;
+  simulation_totals_title: string;
+  simulation_total_income: string;
+  simulation_total_expenses: string;
+  simulation_total_net: string;
 
   // Transaction form
   form_add_title: string;
@@ -531,7 +571,7 @@ export interface Translations {
 const en: Translations = {
   nav_dashboard: "Dashboard",
   nav_transactions: "Transactions",
-  nav_import_csv: "Import CSV",
+  nav_import_csv: "Import",
   nav_categories: "Budget",
   budget_summary_income: "Monthly Income",
   budget_summary_expenses: "Monthly Expenses",
@@ -540,6 +580,7 @@ const en: Translations = {
   budget_all_categories: "All Categories",
   nav_recurring: "Recurring",
   nav_tasks: "Tasks",
+  nav_simulation: "Simulation",
   nav_settings: "Settings",
   nav_admin: "Admin",
   nav_sign_out: "Sign out",
@@ -792,14 +833,16 @@ const en: Translations = {
   admin_deleted: "Account deleted",
   admin_error_generic: "Something went wrong",
 
-  import_title: "Import CSV",
+  import_title: "Import",
   import_step_upload: "upload",
   import_step_map: "map",
   import_step_review: "review",
   import_step_done: "done",
-  import_upload_title: "Upload a CSV file",
-  import_upload_subtitle: "Exported from your bank, credit card, or other app.",
+  import_upload_title: "Upload a CSV or Excel file",
+  import_upload_subtitle: "Exported from your bank, credit card (e.g. MAX), or other app.",
   import_choose_file: "Choose file",
+  import_detected_format: "Detected {name} export — {n} transactions ready to review.",
+  import_xlsx_unsupported: "This Excel file isn't a recognized credit-card export yet. Try CSV, or share a sample so we can add support.",
   import_map_title: "Map Columns",
   import_map_detected: "We detected {n} columns. Match them to the right fields.",
   import_date_col: "Date column *",
@@ -826,12 +869,14 @@ const en: Translations = {
   import_col_category: "Category",
   import_col_book: "Book",
   import_col_tags: "Tags",
+  import_duplicates: "{n} already in your book (skipped)",
+  import_duplicate_badge: "known",
   import_auto_hint: "✦ = auto-categorized from merchant history",
   import_importing: "Importing…",
   import_done_title: "Import complete!",
   import_another: "Import another file",
   import_go_dashboard: "Go to Dashboard",
-  import_desktop_only: "CSV import is available on desktop only. Open this page on a computer to import transactions.",
+  import_desktop_only: "Import is available on desktop only. Open this page on a computer to import transactions.",
 
   recurring_title: "Recurring",
   recurring_add: "Add Recurring",
@@ -906,6 +951,43 @@ const en: Translations = {
   tasks_delete_confirm: "Delete this task?",
   tasks_status_open: "Open",
   tasks_status_done: "Done",
+
+  simulation_title: "Simulation",
+  simulation_subtitle:
+    "Play with target income and expenses without changing your real budget.",
+  simulation_loading: "Loading simulation…",
+  simulation_load_error: "Could not load simulation",
+  simulation_save: "Save",
+  simulation_saving: "Saving…",
+  simulation_saved: "Simulation saved",
+  simulation_save_error: "Could not save simulation",
+  simulation_reset: "Reset",
+  simulation_reset_confirm_title: "Reset simulation?",
+  simulation_reset_confirm:
+    "This clears your simulated amounts and what-if categories, then re-seeds from recurring (or last month).",
+  simulation_cancel: "Cancel",
+  simulation_add: "Add",
+  simulation_add_whatif: "Add what-if",
+  simulation_add_whatif_title: "Add what-if category",
+  simulation_whatif_name: "Name",
+  simulation_whatif_name_placeholder: "e.g. Side hustle / New car",
+  simulation_whatif_type: "Type",
+  simulation_whatif_hint:
+    "What-if rows exist only in this simulation and are not added to your real categories.",
+  simulation_whatif_badge: "What-if",
+  simulation_remove_whatif: "Remove",
+  simulation_no_categories: "No categories in this section.",
+  simulation_section_income: "Income",
+  simulation_section_expenses: "Expenses",
+  simulation_col_category: "Category",
+  simulation_col_recurring: "Recurring",
+  simulation_col_prev: "Last mo",
+  simulation_col_avg3: "Avg 3 mo",
+  simulation_col_sim: "Simulation",
+  simulation_totals_title: "Simulated monthly picture",
+  simulation_total_income: "Income",
+  simulation_total_expenses: "Expenses",
+  simulation_total_net: "Net",
 
   form_add_title: "Add Transaction",
   form_expense: "Expense",
@@ -1043,7 +1125,7 @@ const en: Translations = {
 const he: Translations = {
   nav_dashboard: "לוח בקרה",
   nav_transactions: "עסקאות",
-  nav_import_csv: "ייבוא CSV",
+  nav_import_csv: "ייבוא",
   nav_categories: "תקציב",
   budget_summary_income: "הכנסה חודשית",
   budget_summary_expenses: "הוצאה חודשית",
@@ -1052,6 +1134,7 @@ const he: Translations = {
   budget_all_categories: "כל הקטגוריות",
   nav_recurring: "תשלומים קבועים",
   nav_tasks: "משימות",
+  nav_simulation: "סימולציה",
   nav_settings: "הגדרות",
   nav_admin: "ניהול",
   nav_sign_out: "התנתק",
@@ -1304,14 +1387,16 @@ const he: Translations = {
   admin_deleted: "החשבון נמחק",
   admin_error_generic: "משהו השתבש",
 
-  import_title: "ייבוא CSV",
+  import_title: "ייבוא",
   import_step_upload: "העלאה",
   import_step_map: "מיפוי",
   import_step_review: "סקירה",
   import_step_done: "סיום",
-  import_upload_title: "העלה קובץ CSV",
-  import_upload_subtitle: "מיוצא מהבנק, כרטיס האשראי, או אפליקציה אחרת.",
+  import_upload_title: "העלה קובץ CSV או Excel",
+  import_upload_subtitle: "מיוצא מהבנק, כרטיס האשראי (למשל MAX), או אפליקציה אחרת.",
   import_choose_file: "בחר קובץ",
+  import_detected_format: "זוהה ייצוא {name} — {n} עסקאות מוכנות לסקירה.",
+  import_xlsx_unsupported: "קובץ ה-Excel הזה עדיין לא מזוהה כייצוא כרטיס אשראי. נסה CSV, או שלח דוגמה כדי שנוסיף תמיכה.",
   import_map_title: "מיפוי עמודות",
   import_map_detected: "זיהינו {n} עמודות. התאם אותן לשדות הנכונים.",
   import_date_col: "עמודת תאריך *",
@@ -1338,12 +1423,14 @@ const he: Translations = {
   import_col_category: "קטגוריה",
   import_col_book: "ספר",
   import_col_tags: "תגיות",
+  import_duplicates: "{n} כבר בספר (דולגו)",
+  import_duplicate_badge: "קיים",
   import_auto_hint: "✦ = קובץ אוטומטי מהיסטוריית ספקים",
   import_importing: "מייבא…",
   import_done_title: "הייבוא הושלם!",
   import_another: "ייבא קובץ נוסף",
   import_go_dashboard: "עבור ללוח הבקרה",
-  import_desktop_only: "ייבוא CSV זמין במחשב בלבד. פתח דף זה במחשב כדי לייבא עסקאות.",
+  import_desktop_only: "ייבוא זמין במחשב בלבד. פתח דף זה במחשב כדי לייבא עסקאות.",
 
   recurring_title: "תשלומים קבועים",
   recurring_add: "הוסף תשלום קבוע",
@@ -1418,6 +1505,42 @@ const he: Translations = {
   tasks_delete_confirm: "למחוק משימה זו?",
   tasks_status_open: "פתוחה",
   tasks_status_done: "בוצעה",
+
+  simulation_title: "סימולציה",
+  simulation_subtitle: "שחקו עם יעדי הכנסה והוצאה בלי לשנות את התקציב האמיתי.",
+  simulation_loading: "טוען סימולציה…",
+  simulation_load_error: "לא ניתן לטעון את הסימולציה",
+  simulation_save: "שמור",
+  simulation_saving: "שומר…",
+  simulation_saved: "הסימולציה נשמרה",
+  simulation_save_error: "לא ניתן לשמור את הסימולציה",
+  simulation_reset: "איפוס",
+  simulation_reset_confirm_title: "לאפס את הסימולציה?",
+  simulation_reset_confirm:
+    "פעולה זו תמחק את הסכומים והקטגוריות ההיפותטיות ותמלא מחדש לפי תשלומים קבועים (או החודש הקודם).",
+  simulation_cancel: "ביטול",
+  simulation_add: "הוסף",
+  simulation_add_whatif: "הוסף היפותטי",
+  simulation_add_whatif_title: "הוספת קטגוריה היפותטית",
+  simulation_whatif_name: "שם",
+  simulation_whatif_name_placeholder: "לדוגמה: עבודה צדדית / רכב חדש",
+  simulation_whatif_type: "סוג",
+  simulation_whatif_hint:
+    "שורות היפותטיות קיימות רק בסימולציה ואינן מתווספות לקטגוריות האמיתיות.",
+  simulation_whatif_badge: "היפותטי",
+  simulation_remove_whatif: "הסר",
+  simulation_no_categories: "אין קטגוריות בחלק זה.",
+  simulation_section_income: "הכנסות",
+  simulation_section_expenses: "הוצאות",
+  simulation_col_category: "קטגוריה",
+  simulation_col_recurring: "קבוע",
+  simulation_col_prev: "חודש קודם",
+  simulation_col_avg3: "ממוצע 3 ח׳",
+  simulation_col_sim: "סימולציה",
+  simulation_totals_title: "תמונה חודשית מדומה",
+  simulation_total_income: "הכנסות",
+  simulation_total_expenses: "הוצאות",
+  simulation_total_net: "נטו",
 
   form_add_title: "הוסף עסקה",
   form_expense: "הוצאה",

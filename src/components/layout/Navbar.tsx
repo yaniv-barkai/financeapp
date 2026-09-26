@@ -16,6 +16,7 @@ import {
   PieChart,
   CheckSquare,
   Shield,
+  FlaskConical,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useLocale } from "@/components/providers/LocaleProvider";
@@ -41,6 +42,7 @@ export function Navbar() {
       { href: "/categories", label: t.nav_categories, icon: BarChart3 },
       { href: "/recurring", label: t.nav_recurring, icon: RefreshCw },
       { href: "/tasks", label: t.nav_tasks, icon: CheckSquare },
+      { href: "/simulation", label: t.nav_simulation, icon: FlaskConical },
       { href: "/settings", label: t.nav_settings, icon: Settings },
     ];
     if (isAdmin) {

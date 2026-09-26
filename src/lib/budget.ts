@@ -1,4 +1,5 @@
 import { Category, Transaction } from "./types";
+import { getMonthKey, getPrevMonthKey } from "./utils";
 
 export interface CategoryBudgetRow {
   catId: string;
@@ -24,18 +25,88 @@ export function computeExpenseByCategory(
   return result;
 }
 
-/** Average monthly expense per category over a fixed month window. */
-export function averageExpenseByCategory(
-  transactions: Transaction[],
-  monthCount: number
+/** Sum income amounts per category for the period. */
+export function computeIncomeByCategory(
+  transactions: Transaction[]
 ): Record<string, number> {
-  if (monthCount <= 0) return {};
-  const totals = computeExpenseByCategory(transactions);
+  const map: Record<string, number> = {};
+  for (const tx of transactions) {
+    if (tx.type !== "income") continue;
+    map[tx.categoryId] = (map[tx.categoryId] ?? 0) + tx.amount;
+  }
+  return map;
+}
+
+/**
+ * Month keys for a lookback window ending at `endKey` (inclusive), oldest first.
+ * Example: lookbackMonthKeys("2026-08", 3) → ["2026-06", "2026-07", "2026-08"]
+ */
+export function lookbackMonthKeys(endKey: string, count: number): string[] {
+  if (count <= 0) return [];
+  const keys: string[] = [];
+  let cur = endKey;
+  for (let i = 0; i < count; i++) {
+    keys.unshift(cur);
+    cur = getPrevMonthKey(cur);
+  }
+  return keys;
+}
+
+function averageByCategory(
+  transactions: Transaction[],
+  monthKeys: string[],
+  computeForMonth: (txs: Transaction[]) => Record<string, number>
+): Record<string, number> {
+  if (monthKeys.length === 0) return {};
+
+  const byMonth = new Map<string, Transaction[]>();
+  for (const key of monthKeys) byMonth.set(key, []);
+
+  for (const tx of transactions) {
+    const mk = getMonthKey(tx.date.toDate());
+    const bucket = byMonth.get(mk);
+    if (bucket) bucket.push(tx);
+  }
+
+  const activeMonths = monthKeys.filter((k) => (byMonth.get(k)?.length ?? 0) > 0);
+  const divisor = activeMonths.length;
+  if (divisor === 0) return {};
+
+  const totals: Record<string, number> = {};
+  for (const key of monthKeys) {
+    const monthTotals = computeForMonth(byMonth.get(key) ?? []);
+    for (const [catId, amount] of Object.entries(monthTotals)) {
+      totals[catId] = (totals[catId] ?? 0) + amount;
+    }
+  }
+
   const result: Record<string, number> = {};
   for (const [catId, amount] of Object.entries(totals)) {
-    result[catId] = amount / monthCount;
+    result[catId] = amount / divisor;
   }
   return result;
+}
+
+/**
+ * Average monthly expense per category over the given month keys.
+ * Divides by months that have any book activity (not always by key count).
+ */
+export function averageExpenseByCategory(
+  transactions: Transaction[],
+  monthKeys: string[]
+): Record<string, number> {
+  return averageByCategory(transactions, monthKeys, computeExpenseByCategory);
+}
+
+/**
+ * Average monthly income per category over the given month keys.
+ * Divides by months that have any book activity (not always by key count).
+ */
+export function averageIncomeByCategory(
+  transactions: Transaction[],
+  monthKeys: string[]
+): Record<string, number> {
+  return averageByCategory(transactions, monthKeys, computeIncomeByCategory);
 }
 
 /**

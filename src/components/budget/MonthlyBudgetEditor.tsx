@@ -21,6 +21,7 @@ import {
   averageExpenseByCategory,
   cleanedBudgetAmounts,
   computeExpenseByCategory,
+  lookbackMonthKeys,
 } from "@/lib/budget";
 import { getIdToken } from "@/lib/auth-token";
 import { Transaction } from "@/lib/types";
@@ -102,7 +103,8 @@ export function MonthlyBudgetEditor() {
     setLoading(true);
     try {
       const prevKey = getPrevMonthKey(budgetMonth);
-      const historyStartKey = getPrevMonthKey(getPrevMonthKey(prevKey));
+      const historyKeys = lookbackMonthKeys(prevKey, 3);
+      const historyStartKey = historyKeys[0] ?? prevKey;
       const { start: historyStart } = getMonthRange(historyStartKey);
       const { end: prevEnd } = getMonthRange(prevKey);
       const { start, end } = getMonthRange(budgetMonth);
@@ -131,7 +133,7 @@ export function MonthlyBudgetEditor() {
         (tx) => getMonthKey(tx.date.toDate()) === prevKey
       );
       setPrevSpent(computeExpenseByCategory(prevTxs));
-      setAvg3Spent(averageExpenseByCategory(historyTxs, 3));
+      setAvg3Spent(averageExpenseByCategory(historyTxs, historyKeys));
       setMonthTxs(monthTransactions);
       setCurrentSpent(computeExpenseByCategory(monthTransactions));
       setIsSet(seed.isSet);

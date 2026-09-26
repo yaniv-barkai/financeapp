@@ -8,8 +8,17 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { useAppStore } from "@/lib/store";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { parseCsvText, autoDetectColumns, buildImportRows, DateFormat, isChargedAmountColumn } from "@/lib/csv";
-import { batchImportTransactions } from "@/lib/firestore/transactions";
+import { parseXlsxArrayBuffer } from "@/lib/import/xlsx";
+import { extractCcWorkbook } from "@/lib/import/extractors";
+import { resolvePendingTagNames } from "@/lib/import/ensure-tags";
+import { batchImportTransactions, getTransactionsByMonth } from "@/lib/firestore/transactions";
 import { getMerchants } from "@/lib/firestore/merchants";
+import {
+  buildImportSourceKey,
+  countExistingSoftKeys,
+  importDateRange,
+  markDuplicateRows,
+} from "@/lib/import/source-key";
 import { ImportRow } from "@/lib/types";
 import { CategoryPicker } from "@/components/transactions/CategoryPicker";
 import { TagPicker } from "@/components/transactions/TagPicker";
@@ -33,16 +42,27 @@ import { GuideBanner } from "@/components/guide/GuideBanner";
 
 type Step = "upload" | "map" | "review" | "done";
 
+function isExcelFile(file: File): boolean {
+  const name = file.name.toLowerCase();
+  return (
+    name.endsWith(".xlsx") ||
+    name.endsWith(".xls") ||
+    file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+    file.type === "application/vnd.ms-excel"
+  );
+}
+
 export default function ImportPage() {
   const { loading } = useRequireAuth();
   const { user } = useAuth();
-  const { activeBookId, books, merchants, categories, tags, currency } = useAppStore();
+  const { activeBookId, books, merchants, categories, tags, currency, setTags } = useAppStore();
   const { t, locale } = useLocale();
   const { result: guideResult } = useGuideContext();
 
   const [step, setStep] = useState<Step>("upload");
   const [csvText, setCsvText] = useState("");
   const [headers, setHeaders] = useState<string[]>([]);
+  const [detectedFormat, setDetectedFormat] = useState<string | null>(null);
 
   const [dateCol, setDateCol] = useState("");
   const [merchantCol, setMerchantCol] = useState("");
@@ -68,9 +88,102 @@ export default function ImportPage() {
     return mem;
   }, [merchants]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  /** Mark rows that exactly match existing txs (date + amount + merchant + tags). */
+  const applyDuplicateDetection = async (
+    built: ImportRow[],
+    source: "csv" | "max" = "csv"
+  ): Promise<ImportRow[]> => {
+    if (!user || built.length === 0) {
+      return markDuplicateRows(built, new Map(), source);
+    }
+
+    const range = importDateRange(built);
+    if (!range) return markDuplicateRows(built, new Map(), source);
+
+    const byBook = new Map<string, ImportRow[]>();
+    for (const r of built) {
+      const bid = r.bookId || activeBookId || "";
+      if (!byBook.has(bid)) byBook.set(bid, []);
+      byBook.get(bid)!.push(r);
+    }
+
+    const markedById = new Map<string, ImportRow>();
+    for (const [bookId, bookRows] of byBook) {
+      if (!bookId) {
+        for (const r of markDuplicateRows(bookRows, new Map(), source)) {
+          markedById.set(r.id, r);
+        }
+        continue;
+      }
+      try {
+        const existing = await getTransactionsByMonth(
+          user.uid,
+          bookId,
+          range.start,
+          range.end
+        );
+        const counts = countExistingSoftKeys(existing);
+        for (const r of markDuplicateRows(bookRows, counts, source)) {
+          markedById.set(r.id, r);
+        }
+      } catch {
+        for (const r of markDuplicateRows(bookRows, new Map(), source)) {
+          markedById.set(r.id, r);
+        }
+      }
+    }
+
+    return built.map((r) => markedById.get(r.id) ?? r);
+  };
+
+  const applyExtractorRows = async (built: ImportRow[], formatLabel: string) => {
+    const bookId = activeBookId ?? books[0]?.id ?? "";
+    let next = built;
+    if (user && bookId) {
+      const resolved = await resolvePendingTagNames(user.uid, bookId, built, tags);
+      setTags(resolved.tags);
+      next = resolved.rows;
+    }
+    const source: "csv" | "max" = /max/i.test(formatLabel) ? "max" : "csv";
+    next = await applyDuplicateDetection(next, source);
+    setRows(next);
+    setDetectedFormat(formatLabel);
+    setStep("review");
+    const dupes = next.filter((r) => r.isDuplicate).length;
+    const fresh = next.length - dupes;
+    toast.success(
+      t.import_detected_format
+        .replace("{name}", formatLabel)
+        .replace("{n}", String(fresh))
+    );
+    if (dupes > 0) {
+      toast.message(t.import_duplicates.replace("{n}", String(dupes)));
+    }
+  };
+
+  const handleExcelUpload = async (file: File) => {
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = parseXlsxArrayBuffer(buffer);
+      const extracted = extractCcWorkbook(workbook, {
+        merchantMemory,
+        defaultCategoryId,
+        defaultBookId: activeBookId ?? books[0]?.id ?? "",
+      });
+      if (!extracted || extracted.rows.length === 0) {
+        setCsvError(t.import_xlsx_unsupported);
+        return;
+      }
+      setCsvError(null);
+      setCsvText("");
+      setHeaders([]);
+      await applyExtractorRows(extracted.rows, extracted.label);
+    } catch {
+      setCsvError(t.import_xlsx_unsupported);
+    }
+  };
+
+  const handleCsvUpload = (file: File) => {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
@@ -78,10 +191,10 @@ export default function ImportPage() {
       const validHeaders = headers.filter((h) => h.trim() !== "");
       if (validHeaders.length === 0) {
         setCsvError("Could not detect any column headers in this CSV file. Please check the file and try again.");
-        e.target.value = "";
         return;
       }
       setCsvError(null);
+      setDetectedFormat(null);
       setCsvText(text);
       setHeaders(validHeaders);
 
@@ -100,6 +213,20 @@ export default function ImportPage() {
     reader.readAsText(file);
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const input = e.target;
+    void (async () => {
+      if (isExcelFile(file)) {
+        await handleExcelUpload(file);
+      } else {
+        handleCsvUpload(file);
+      }
+      input.value = "";
+    })();
+  };
+
   const handleBuildRows = () => {
     const { rows: csvRows } = parseCsvText(csvText);
     const built = buildImportRows(csvRows, {
@@ -114,8 +241,15 @@ export default function ImportPage() {
       defaultBookId: activeBookId ?? books[0]?.id ?? "",
       dateFormat,
     });
-    setRows(built);
-    setStep("review");
+    void (async () => {
+      const next = await applyDuplicateDetection(built, "csv");
+      setRows(next);
+      setStep("review");
+      const dupes = next.filter((r) => r.isDuplicate).length;
+      if (dupes > 0) {
+        toast.message(t.import_duplicates.replace("{n}", String(dupes)));
+      }
+    })();
   };
 
   const updateRow = (id: string, changes: Partial<ImportRow>) => {
@@ -129,6 +263,7 @@ export default function ImportPage() {
   // Only rows that have a category, are not skipped, and not yet imported
   const readyToImport = rows.filter((r) => !r.skip && r.categoryId && !r.imported);
   const alreadyImported = rows.filter((r) => r.imported).length;
+  const duplicateCount = rows.filter((r) => r.isDuplicate && !r.imported).length;
   const uncategorized = rows.filter((r) => !r.skip && !r.categoryId && !r.imported).length;
 
   const handleImport = async () => {
@@ -163,6 +298,13 @@ export default function ImportPage() {
             date: Timestamp.fromDate(r.date),
             tags: r.tags ?? [],
             source: "csv" as const,
+            sourceKey: buildImportSourceKey(
+              "csv",
+              r.date,
+              r.amount,
+              r.merchantNormalized,
+              r.tags
+            ),
           };
         });
         await batchImportTransactions(user.uid, bookId, txRows, merchantUpdates);
@@ -285,6 +427,7 @@ export default function ImportPage() {
     setImportedCount(0);
     setDateFormat("auto");
     setCsvError(null);
+    setDetectedFormat(null);
   };
 
   const stepLabels: Record<Step, string> = {
@@ -326,7 +469,12 @@ export default function ImportPage() {
                 <p className="font-medium">{t.import_upload_title}</p>
                 <p className="text-sm text-muted-foreground mt-1">{t.import_upload_subtitle}</p>
               </div>
-              <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleFileUpload} />
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
               <Button variant="outline">{t.import_choose_file}</Button>
             </label>
             {csvError && (
@@ -436,6 +584,13 @@ export default function ImportPage() {
       {/* Step 3: Review */}
       {step === "review" && (
         <div className="space-y-4">
+          {detectedFormat && (
+            <p className="text-sm text-muted-foreground">
+              {t.import_detected_format
+                .replace("{name}", detectedFormat)
+                .replace("{n}", String(rows.length))}
+            </p>
+          )}
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-2 text-sm">
@@ -444,6 +599,11 @@ export default function ImportPage() {
                 )}
                 {readyToImport.length > 0 && (
                   <span className="text-primary font-medium">{readyToImport.length} ready</span>
+                )}
+                {duplicateCount > 0 && (
+                  <span className="text-muted-foreground">
+                    {t.import_duplicates.replace("{n}", String(duplicateCount))}
+                  </span>
                 )}
                 {uncategorized > 0 && (
                   <span className="text-muted-foreground">{uncategorized} uncategorized</span>
@@ -490,7 +650,15 @@ export default function ImportPage() {
                 {rows.map((row) => (
                   <tr
                     key={row.id}
-                    className={`${row.imported ? "bg-green-50 dark:bg-green-950/20" : row.skip ? "opacity-40" : ""}`}
+                    className={`${
+                      row.imported
+                        ? "bg-green-50 dark:bg-green-950/20"
+                        : row.isDuplicate
+                          ? "opacity-45 bg-muted/40"
+                          : row.skip
+                            ? "opacity-40"
+                            : ""
+                    }`}
                   >
                     <td className="px-3 py-2 w-12">
                       {row.imported ? (
@@ -511,6 +679,11 @@ export default function ImportPage() {
                         {row.merchantDisplay}
                         {row.suggestedCategoryId && row.categoryId === row.suggestedCategoryId && (
                           <span className="ms-1 text-xs text-primary">✦</span>
+                        )}
+                        {row.isDuplicate && !row.imported && (
+                          <span className="ms-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                            {t.import_duplicate_badge}
+                          </span>
                         )}
                       </span>
                     </td>
@@ -574,7 +747,12 @@ export default function ImportPage() {
           <div className="text-xs text-muted-foreground">{t.import_auto_hint}</div>
 
           <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" onClick={() => setStep("map")}>{t.import_back}</Button>
+            <Button
+              variant="outline"
+              onClick={() => setStep(detectedFormat ? "upload" : "map")}
+            >
+              {t.import_back}
+            </Button>
             <Button
               onClick={handleImport}
               disabled={importing || readyToImport.length === 0}

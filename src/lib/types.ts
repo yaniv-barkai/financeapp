@@ -108,6 +108,21 @@ export interface Task {
   createdAt: Timestamp;
 }
 
+/** Simulation-only category row (never written to real categories). */
+export interface SimulationWhatIfCategory {
+  id: string;
+  name: string;
+  type: TransactionType;
+}
+
+/** One playground sheet per book (doc id = "main"). */
+export interface Simulation {
+  amounts: Record<string, number>;
+  whatIfCategories: SimulationWhatIfCategory[];
+  whatIfAmounts: Record<string, number>;
+  updatedAt?: Timestamp;
+}
+
 export type MaxSyncStatus = "ok" | "error" | "running";
 
 export interface MaxSyncSettings {
@@ -191,7 +206,12 @@ export interface ImportRow {
   suggestedCategoryId?: string;
   bookId: string;
   skip: boolean;
+  /** True when this row matches an existing transaction in the book. */
   isDuplicate?: boolean;
+  /** Fingerprint written to Transaction.sourceKey on import. */
+  sourceKey?: string;
   tags: string[];
+  /** Tag display names to resolve to IDs (e.g. card last-4) before review. */
+  pendingTagNames?: string[];
   imported?: boolean;
 }
