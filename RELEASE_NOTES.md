@@ -2,6 +2,10 @@
 
 Newest first. Format: `vMAJOR.MINOR` (two-digit minor). See `.cursor/rules/versioning.mdc`.
 
+## v1.06 — 2026-09-27
+
+- Fixed: the Simulation page was showing a copy of the Dashboard instead of the simulation. It now opens the budget simulation again, with "Budget" and "Pay off debts" tabs (the debt pay-off planner uses the net from the budget simulation).
+
 ## v1.05 — 2026-09-26
 
 - Recurring suggestions are stricter: only the same business, exact same amount, and day of month within ±3 days — and it must appear in all of the last 3 months — so one-off purchases are no longer suggested.
