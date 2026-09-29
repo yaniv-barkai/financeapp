@@ -5,7 +5,9 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   serverTimestamp,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { Debt } from "../types";
@@ -32,12 +34,18 @@ export async function getDebts(uid: string, bookId: string): Promise<Debt[]> {
       name: (data.name as string) ?? "",
       balance: Number(data.balance) || 0,
       monthlyPayment: Number(data.monthlyPayment) || 0,
+      interestType: data.interestType === "prime" ? "prime" : "fixed",
+      annualInterestRate: Number(data.annualInterestRate) || 0,
+      primeMargin: Number(data.primeMargin) || 0,
       forcePhase1: Boolean(data.forcePhase1),
+      payoffOrder:
+        typeof data.payoffOrder === "number" ? data.payoffOrder : undefined,
       recurringId: data.recurringId as string | undefined,
       transactionIds: (data.transactionIds as string[]) ?? [],
       matchMerchants: (data.matchMerchants as string[]) ?? [],
       categoryId: data.categoryId as string | undefined,
       note: data.note as string | undefined,
+      dueDate: (data.dueDate as string) || undefined,
       status: (data.status as Debt["status"]) ?? "open",
       createdAt: data.createdAt,
     } as Debt;
@@ -70,6 +78,22 @@ export async function updateDebt(
     doc(db, "users", uid, "books", bookId, "debts", debtId),
     withoutUndefined(data)
   );
+}
+
+/** Set each debt's pay-off position in one write; null clears it (back to the default order). */
+export async function setDebtPayoffOrders(
+  uid: string,
+  bookId: string,
+  orders: Record<string, number | null>
+): Promise<void> {
+  assertOwner(uid);
+  const batch = writeBatch(db);
+  for (const [debtId, order] of Object.entries(orders)) {
+    batch.update(doc(db, "users", uid, "books", bookId, "debts", debtId), {
+      payoffOrder: order === null ? deleteField() : order,
+    });
+  }
+  await batch.commit();
 }
 
 export async function deleteDebt(

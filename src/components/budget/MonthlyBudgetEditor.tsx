@@ -1,7 +1,18 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Eraser, Sparkles, Save, TrendingUp, TrendingDown, Wallet, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Eraser,
+  Sparkles,
+  Save,
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+  X,
+} from "lucide-react";
 import { addMonths, subMonths } from "date-fns";
 import { toast } from "sonner";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -12,6 +23,7 @@ import {
   saveMonthlyBudget,
 } from "@/lib/firestore/budgets";
 import { getRecurring, toMonthlyRecurringAmount } from "@/lib/firestore/recurring";
+import { getSimulation } from "@/lib/firestore/simulations";
 import {
   getTransactionsByMonth,
   updateTransaction,
@@ -19,12 +31,14 @@ import {
 import { upsertMerchant } from "@/lib/firestore/merchants";
 import {
   averageExpenseByCategory,
+  averageIncomeByCategory,
   cleanedBudgetAmounts,
   computeExpenseByCategory,
+  computeIncomeByCategory,
   lookbackMonthKeys,
 } from "@/lib/budget";
 import { getIdToken } from "@/lib/auth-token";
-import { Transaction } from "@/lib/types";
+import { Category, Transaction } from "@/lib/types";
 import {
   cn,
   formatCurrency,
@@ -57,6 +71,33 @@ interface SuggestItem {
   reason: string;
 }
 
+function toInputs(
+  cats: Category[],
+  values: Record<string, number>
+): Record<string, string> {
+  const next: Record<string, string> = {};
+  for (const cat of cats) {
+    const v = values[cat.id];
+    next[cat.id] = v !== undefined && v > 0 ? String(v) : "";
+  }
+  return next;
+}
+
+function roundedAmounts(values: Record<string, number>): Record<string, number> {
+  const next: Record<string, number> = {};
+  for (const [id, v] of Object.entries(values)) next[id] = Math.round(v);
+  return next;
+}
+
+function parseInputs(inputs: Record<string, string>): Record<string, number> {
+  const map: Record<string, number> = {};
+  for (const [catId, raw] of Object.entries(inputs)) {
+    const n = parseFloat(raw);
+    if (!isNaN(n) && n > 0) map[catId] = n;
+  }
+  return map;
+}
+
 export function MonthlyBudgetEditor() {
   const { user } = useAuth();
   const { activeBookId, categories, currency, setMerchants } = useAppStore();
@@ -66,12 +107,16 @@ export function MonthlyBudgetEditor() {
 
   const [budgetMonth, setBudgetMonth] = useState(() => getMonthKey(new Date()));
   const [amounts, setAmounts] = useState<Record<string, string>>({});
-  const [incomeInput, setIncomeInput] = useState("");
+  const [incomeAmounts, setIncomeAmounts] = useState<Record<string, string>>({});
   const [recurringByCat, setRecurringByCat] = useState<Record<string, number>>({});
-  const [recurringIncome, setRecurringIncome] = useState(0);
+  const [recurringIncomeByCat, setRecurringIncomeByCat] = useState<Record<string, number>>({});
   const [prevSpent, setPrevSpent] = useState<Record<string, number>>({});
   const [avg3Spent, setAvg3Spent] = useState<Record<string, number>>({});
   const [currentSpent, setCurrentSpent] = useState<Record<string, number>>({});
+  const [prevIncome, setPrevIncome] = useState<Record<string, number>>({});
+  const [avg3Income, setAvg3Income] = useState<Record<string, number>>({});
+  const [currentIncome, setCurrentIncome] = useState<Record<string, number>>({});
+  const [copyingSim, setCopyingSim] = useState(false);
   const [monthTxs, setMonthTxs] = useState<Transaction[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [isSet, setIsSet] = useState(false);
@@ -84,6 +129,10 @@ export function MonthlyBudgetEditor() {
 
   const expenseCategories = useMemo(
     () => categories.filter((c) => c.type === "expense").sort((a, b) => a.order - b.order),
+    [categories]
+  );
+  const incomeCategories = useMemo(
+    () => categories.filter((c) => c.type === "income").sort((a, b) => a.order - b.order),
     [categories]
   );
 
@@ -117,42 +166,39 @@ export function MonthlyBudgetEditor() {
       ]);
 
       const recMap: Record<string, number> = {};
-      let incomeTotal = 0;
+      const recIncomeMap: Record<string, number> = {};
       for (const r of recurrings.filter((x) => x.active)) {
         const monthly = toMonthlyRecurringAmount(r.amount, r.cadence);
         if (r.type === "expense") {
           recMap[r.categoryId] = (recMap[r.categoryId] ?? 0) + monthly;
         } else if (r.type === "income") {
-          incomeTotal += monthly;
+          recIncomeMap[r.categoryId] = (recIncomeMap[r.categoryId] ?? 0) + monthly;
         }
       }
       setRecurringByCat(recMap);
-      setRecurringIncome(incomeTotal);
+      setRecurringIncomeByCat(recIncomeMap);
 
       const prevTxs = historyTxs.filter(
         (tx) => getMonthKey(tx.date.toDate()) === prevKey
       );
       setPrevSpent(computeExpenseByCategory(prevTxs));
       setAvg3Spent(averageExpenseByCategory(historyTxs, historyKeys));
+      setPrevIncome(computeIncomeByCategory(prevTxs));
+      setAvg3Income(averageIncomeByCategory(historyTxs, historyKeys));
       setMonthTxs(monthTransactions);
       setCurrentSpent(computeExpenseByCategory(monthTransactions));
+      setCurrentIncome(computeIncomeByCategory(monthTransactions));
       setIsSet(seed.isSet);
       setSeededFrom(seed.seededFrom);
 
-      let incomeStr = "";
-      if (seed.income !== undefined) {
-        incomeStr = String(seed.income);
-      } else if (incomeTotal > 0) {
-        incomeStr = String(incomeTotal);
-      }
-      setIncomeInput(incomeStr);
-
-      const next: Record<string, string> = {};
-      for (const cat of expenseCategories) {
-        const v = seed.amounts[cat.id];
-        next[cat.id] = v !== undefined && v > 0 ? String(v) : "";
-      }
-      setAmounts(next);
+      setAmounts(toInputs(expenseCategories, seed.amounts));
+      // Budgets saved before per-category income start from recurring income.
+      setIncomeAmounts(
+        toInputs(
+          incomeCategories,
+          seed.incomeAmounts ?? roundedAmounts(recIncomeMap)
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -164,23 +210,13 @@ export function MonthlyBudgetEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, activeBookId, budgetMonth, categories.length]);
 
-  const parsedAmounts = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const [catId, raw] of Object.entries(amounts)) {
-      const n = parseFloat(raw);
-      if (!isNaN(n) && n > 0) map[catId] = n;
-    }
-    return map;
-  }, [amounts]);
+  const parsedAmounts = useMemo(() => parseInputs(amounts), [amounts]);
+  const parsedIncomeAmounts = useMemo(() => parseInputs(incomeAmounts), [incomeAmounts]);
 
-  const monthlyIncome = useMemo(() => {
-    const trimmed = incomeInput.trim();
-    if (trimmed !== "") {
-      const n = parseFloat(trimmed);
-      if (!isNaN(n) && n >= 0) return n;
-    }
-    return recurringIncome;
-  }, [incomeInput, recurringIncome]);
+  const monthlyIncome = useMemo(
+    () => Object.values(parsedIncomeAmounts).reduce((s, v) => s + v, 0),
+    [parsedIncomeAmounts]
+  );
 
   const totalBudget = useMemo(
     () => Object.values(parsedAmounts).reduce((s, v) => s + v, 0),
@@ -217,13 +253,16 @@ export function MonthlyBudgetEditor() {
       .sort((a, b) => b.date.toMillis() - a.date.toMillis());
   }, [monthTxs, selectedCategoryId]);
 
+  const selectedIsIncome = selectedCategory?.type === "income";
+
   const categoryTotal = useMemo(
     () =>
       categoryTransactions.reduce(
-        (s, tx) => s + (tx.type === "expense" ? tx.amount : -tx.amount),
+        (s, tx) =>
+          s + ((tx.type === "income") === selectedIsIncome ? tx.amount : -tx.amount),
         0
       ),
-    [categoryTransactions]
+    [categoryTransactions, selectedIsIncome]
   );
 
   const handleCategoryChange = async (tx: Transaction, categoryId: string) => {
@@ -231,6 +270,7 @@ export function MonthlyBudgetEditor() {
     setMonthTxs((prev) => {
       const next = prev.map((t) => (t.id === tx.id ? { ...t, categoryId } : t));
       setCurrentSpent(computeExpenseByCategory(next));
+      setCurrentIncome(computeIncomeByCategory(next));
       return next;
     });
     await updateTransaction(user.uid, activeBookId, tx.id, { categoryId });
@@ -252,7 +292,7 @@ export function MonthlyBudgetEditor() {
         activeBookId,
         budgetMonth,
         parsedAmounts,
-        monthlyIncome
+        parsedIncomeAmounts
       );
       setIsSet(true);
       setSeededFrom("month");
@@ -266,6 +306,33 @@ export function MonthlyBudgetEditor() {
       toast.error(t.monthly_budget_save_error);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCopyFromSimulation = async () => {
+    if (!user || !activeBookId) return;
+    setCopyingSim(true);
+    try {
+      const sim = await getSimulation(user.uid, activeBookId);
+      if (!sim) {
+        toast.info(t.monthly_budget_copy_sim_empty);
+        return;
+      }
+      setAmounts(toInputs(expenseCategories, sim.amounts));
+      setIncomeAmounts(toInputs(incomeCategories, sim.amounts));
+      toast.success(t.monthly_budget_copy_sim_done);
+      const skippedWhatIfs = sim.whatIfCategories.filter(
+        (c) => (sim.whatIfAmounts[c.id] ?? 0) > 0
+      ).length;
+      if (skippedWhatIfs > 0) {
+        toast.info(
+          t.monthly_budget_copy_sim_whatif.replace("{count}", String(skippedWhatIfs))
+        );
+      }
+    } catch {
+      toast.error(t.monthly_budget_copy_sim_error);
+    } finally {
+      setCopyingSim(false);
     }
   };
 
@@ -405,6 +472,130 @@ export function MonthlyBudgetEditor() {
 
   const align = isRtl ? "text-right" : "text-left";
 
+  const renderSectionHeader = (title: string) => (
+    <>
+      <h3 className={cn("text-sm font-semibold text-muted-foreground px-1", align)}>{title}</h3>
+      <div className="hidden sm:flex items-center gap-2 px-2 text-[11px] text-muted-foreground">
+        <span className={cn("min-w-0 flex-1", align)}>{t.monthly_budget_col_category}</span>
+        <span className="w-[90px] shrink-0 text-center">{t.monthly_budget_col_recurring}</span>
+        <span className="w-[90px] shrink-0 text-center">{t.monthly_budget_col_prev}</span>
+        <span className="w-[90px] shrink-0 text-center">{t.monthly_budget_col_avg3}</span>
+        <span className="w-[110px] shrink-0 text-center">{t.monthly_budget_col_budget}</span>
+      </div>
+    </>
+  );
+
+  const renderCategoryRow = (cat: Category, isIncome: boolean) => {
+    const rec = (isIncome ? recurringIncomeByCat : recurringByCat)[cat.id] ?? 0;
+    const prev = (isIncome ? prevIncome : prevSpent)[cat.id] ?? 0;
+    const avg3 = (isIncome ? avg3Income : avg3Spent)[cat.id] ?? 0;
+    const actual = (isIncome ? currentIncome : currentSpent)[cat.id] ?? 0;
+    const budget = (isIncome ? parsedIncomeAmounts : parsedAmounts)[cat.id] ?? 0;
+    const inputs = isIncome ? incomeAmounts : amounts;
+    const setInputs = isIncome ? setIncomeAmounts : setAmounts;
+    const over = !isIncome && budget > 0 && actual > budget;
+    const belowRecurring = !isIncome && rec > 0 && budget < rec;
+    const txCount = txCountByCat[cat.id] ?? 0;
+    return (
+      <div
+        key={cat.id}
+        className={cn(
+          "flex flex-col gap-2 rounded-lg border px-3 py-2.5 sm:flex-row sm:items-center",
+          belowRecurring && "border-red-400 bg-red-50/60 dark:bg-red-950/25",
+          !belowRecurring && over && "border-red-300 bg-red-50/50 dark:bg-red-950/20"
+        )}
+      >
+        <button
+          type="button"
+          className={cn(
+            "flex min-w-0 flex-1 items-center gap-2 rounded-md -ms-1 ps-1 pe-2 py-1 text-start",
+            "hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          )}
+          onClick={() => setSelectedCategoryId(cat.id)}
+        >
+          <span
+            className="text-lg w-8 h-8 flex items-center justify-center rounded-md flex-shrink-0"
+            style={{ backgroundColor: cat.color + "22" }}
+          >
+            {cat.icon}
+          </span>
+          <div className={cn("min-w-0", align)}>
+            <div className="font-medium text-sm truncate">
+              {getCategoryDisplayName(cat, locale)}
+            </div>
+            {(budget > 0 || actual > 0) && (
+              <div className="text-[11px] text-muted-foreground">
+                {isIncome ? t.monthly_budget_received : t.monthly_budget_spent}:{" "}
+                <span dir="ltr" className="tabular-nums">
+                  {formatCurrency(actual, currency)}
+                </span>
+                {txCount > 0 && (
+                  <span className="ms-1">
+                    · {t.monthly_budget_tx_count.replace("{count}", String(txCount))}
+                  </span>
+                )}
+                {over && (
+                  <span className="text-red-600 ms-1">
+                    ({t.dashboard_budget_over}{" "}
+                    <span dir="ltr">{formatCurrency(actual - budget, currency)}</span>)
+                  </span>
+                )}
+              </div>
+            )}
+            {belowRecurring && (
+              <div className="text-[11px] text-red-600">
+                {t.monthly_budget_below_recurring}
+              </div>
+            )}
+          </div>
+        </button>
+        <div className="w-full text-start text-xs tabular-nums text-muted-foreground sm:w-[90px] sm:shrink-0 sm:text-center">
+          <span className={cn("sm:hidden text-muted-foreground me-1", align)}>
+            {t.monthly_budget_col_recurring}:
+          </span>
+          <span dir="ltr" className="inline-block">
+            {rec > 0 ? formatCurrency(rec, currency) : "—"}
+          </span>
+        </div>
+        <div className="w-full text-start text-xs tabular-nums text-muted-foreground sm:w-[90px] sm:shrink-0 sm:text-center">
+          <span className={cn("sm:hidden text-muted-foreground me-1", align)}>
+            {t.monthly_budget_col_prev}:
+          </span>
+          <span dir="ltr" className="inline-block">
+            {prev > 0 ? formatCurrency(prev, currency) : "—"}
+          </span>
+        </div>
+        <div className="w-full text-start text-xs tabular-nums text-muted-foreground sm:w-[90px] sm:shrink-0 sm:text-center">
+          <span className={cn("sm:hidden text-muted-foreground me-1", align)}>
+            {t.monthly_budget_col_avg3}:
+          </span>
+          <span dir="ltr" className="inline-block">
+            {avg3 > 0 ? formatCurrency(avg3, currency) : "—"}
+          </span>
+        </div>
+        <Input
+          type="number"
+          min="0"
+          step="10"
+          inputMode="decimal"
+          className={cn(
+            "h-8 w-full text-sm tabular-nums sm:w-[110px] sm:shrink-0",
+            isRtl && "text-right",
+            isIncome && "text-green-600",
+            belowRecurring && "border-red-500 text-red-700 focus-visible:ring-red-500"
+          )}
+          placeholder="0"
+          value={inputs[cat.id] ?? ""}
+          onChange={(e) =>
+            setInputs((prevAmt) => ({ ...prevAmt, [cat.id]: e.target.value }))
+          }
+          aria-label={getCategoryDisplayName(cat, locale)}
+          dir="ltr"
+        />
+      </div>
+    );
+  };
+
   return (
     <Card dir={isRtl ? "rtl" : "ltr"}>
       <CardHeader className="pb-3 space-y-3">
@@ -447,7 +638,17 @@ export function MonthlyBudgetEditor() {
           <div className={cn("text-sm text-muted-foreground", align)}>
             {seedHint && <span>{seedHint}</span>}
           </div>
-          <div className={cn("flex gap-2", isRtl && "order-first")}>
+          <div className={cn("flex flex-wrap gap-2", isRtl && "order-first")}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={handleCopyFromSimulation}
+              disabled={copyingSim || loading}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              {t.monthly_budget_copy_sim}
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -489,28 +690,12 @@ export function MonthlyBudgetEditor() {
               <TrendingUp className="h-3 w-3 text-green-500" />
               {t.monthly_budget_income}
             </span>
-            <Input
-              type="number"
-              min="0"
-              step="10"
-              inputMode="decimal"
-              className={cn(
-                "h-8 w-full max-w-[140px] text-sm font-semibold text-green-600 tabular-nums",
-                isRtl && "text-right"
-              )}
-              placeholder={
-                recurringIncome > 0 ? String(Math.round(recurringIncome)) : "0"
-              }
-              value={incomeInput}
-              onChange={(e) => setIncomeInput(e.target.value)}
-              aria-label={t.monthly_budget_income}
-              dir="ltr"
-            />
-            {recurringIncome > 0 && !incomeInput && (
-              <span className="text-[10px] text-muted-foreground">
-                {t.monthly_budget_income_from_recurring}
-              </span>
-            )}
+            <span className="text-base font-semibold text-green-600 tabular-nums" dir="ltr">
+              {formatCurrency(monthlyIncome, currency)}
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              {t.monthly_budget_income_total_hint}
+            </span>
           </div>
           <div className="flex flex-col gap-0.5 items-start">
             <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -553,127 +738,25 @@ export function MonthlyBudgetEditor() {
       <CardContent className="pt-4">
         {loading ? (
           <p className={cn("text-sm text-muted-foreground py-6", align)}>{t.monthly_budget_loading}</p>
-        ) : expenseCategories.length === 0 ? (
+        ) : expenseCategories.length === 0 && incomeCategories.length === 0 ? (
           <p className={cn("text-sm text-muted-foreground py-6", align)}>{t.categories_no_categories}</p>
         ) : (
-          <div className="space-y-2">
-            <div className="hidden sm:flex items-center gap-2 px-2 text-[11px] text-muted-foreground">
-              <span className={cn("min-w-0 flex-1", align)}>{t.monthly_budget_col_category}</span>
-              <span className="w-[90px] shrink-0 text-center">{t.monthly_budget_col_recurring}</span>
-              <span className="w-[90px] shrink-0 text-center">{t.monthly_budget_col_prev}</span>
-              <span className="w-[90px] shrink-0 text-center">{t.monthly_budget_col_avg3}</span>
-              <span className="w-[110px] shrink-0 text-center">{t.monthly_budget_col_budget}</span>
-            </div>
-            {expenseCategories.map((cat) => {
-              const rec = recurringByCat[cat.id] ?? 0;
-              const prev = prevSpent[cat.id] ?? 0;
-              const avg3 = avg3Spent[cat.id] ?? 0;
-              const spent = currentSpent[cat.id] ?? 0;
-              const budget = parsedAmounts[cat.id] ?? 0;
-              const over = budget > 0 && spent > budget;
-              const belowRecurring = rec > 0 && budget < rec;
-              const txCount = txCountByCat[cat.id] ?? 0;
-              return (
-                <div
-                  key={cat.id}
-                  className={cn(
-                    "flex flex-col gap-2 rounded-lg border px-3 py-2.5 sm:flex-row sm:items-center",
-                    belowRecurring && "border-red-400 bg-red-50/60 dark:bg-red-950/25",
-                    !belowRecurring && over && "border-red-300 bg-red-50/50 dark:bg-red-950/20"
-                  )}
-                >
-                  <button
-                    type="button"
-                    className={cn(
-                      "flex min-w-0 flex-1 items-center gap-2 rounded-md -ms-1 ps-1 pe-2 py-1 text-start",
-                      "hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    )}
-                    onClick={() => setSelectedCategoryId(cat.id)}
-                  >
-                    <span
-                      className="text-lg w-8 h-8 flex items-center justify-center rounded-md flex-shrink-0"
-                      style={{ backgroundColor: cat.color + "22" }}
-                    >
-                      {cat.icon}
-                    </span>
-                    <div className={cn("min-w-0", align)}>
-                      <div className="font-medium text-sm truncate">
-                        {getCategoryDisplayName(cat, locale)}
-                      </div>
-                      {(budget > 0 || spent > 0) && (
-                        <div className="text-[11px] text-muted-foreground">
-                          {t.monthly_budget_spent}:{" "}
-                          <span dir="ltr" className="tabular-nums">
-                            {formatCurrency(spent, currency)}
-                          </span>
-                          {txCount > 0 && (
-                            <span className="ms-1">
-                              · {t.monthly_budget_tx_count.replace("{count}", String(txCount))}
-                            </span>
-                          )}
-                          {over && (
-                            <span className="text-red-600 ms-1">
-                              ({t.dashboard_budget_over}{" "}
-                              <span dir="ltr">{formatCurrency(spent - budget, currency)}</span>)
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {belowRecurring && (
-                        <div className="text-[11px] text-red-600">
-                          {t.monthly_budget_below_recurring}
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                  <div className="w-full text-start text-xs tabular-nums text-muted-foreground sm:w-[90px] sm:shrink-0 sm:text-center">
-                    <span className={cn("sm:hidden text-muted-foreground me-1", align)}>
-                      {t.monthly_budget_col_recurring}:
-                    </span>
-                    <span dir="ltr" className="inline-block">
-                      {rec > 0 ? formatCurrency(rec, currency) : "—"}
-                    </span>
-                  </div>
-                  <div className="w-full text-start text-xs tabular-nums text-muted-foreground sm:w-[90px] sm:shrink-0 sm:text-center">
-                    <span className={cn("sm:hidden text-muted-foreground me-1", align)}>
-                      {t.monthly_budget_col_prev}:
-                    </span>
-                    <span dir="ltr" className="inline-block">
-                      {prev > 0 ? formatCurrency(prev, currency) : "—"}
-                    </span>
-                  </div>
-                  <div className="w-full text-start text-xs tabular-nums text-muted-foreground sm:w-[90px] sm:shrink-0 sm:text-center">
-                    <span className={cn("sm:hidden text-muted-foreground me-1", align)}>
-                      {t.monthly_budget_col_avg3}:
-                    </span>
-                    <span dir="ltr" className="inline-block">
-                      {avg3 > 0 ? formatCurrency(avg3, currency) : "—"}
-                    </span>
-                  </div>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="10"
-                    inputMode="decimal"
-                    className={cn(
-                      "h-8 w-full text-sm tabular-nums sm:w-[110px] sm:shrink-0",
-                      isRtl && "text-right",
-                      belowRecurring && "border-red-500 text-red-700 focus-visible:ring-red-500"
-                    )}
-                    placeholder="0"
-                    value={amounts[cat.id] ?? ""}
-                    onChange={(e) =>
-                      setAmounts((prevAmt) => ({ ...prevAmt, [cat.id]: e.target.value }))
-                    }
-                    dir="ltr"
-                  />
-                </div>
-              );
-            })}
+          <div className="space-y-6">
+            {incomeCategories.length > 0 && (
+              <div className="space-y-2">
+                {renderSectionHeader(t.monthly_budget_section_income)}
+                {incomeCategories.map((cat) => renderCategoryRow(cat, true))}
+              </div>
+            )}
+            {expenseCategories.length > 0 && (
+              <div className="space-y-2">
+                {renderSectionHeader(t.monthly_budget_section_expenses)}
+                {expenseCategories.map((cat) => renderCategoryRow(cat, false))}
+              </div>
+            )}
           </div>
         )}
       </CardContent>
-
       <Dialog
         open={!!selectedCategoryId}
         onOpenChange={(o) => !o && setSelectedCategoryId(null)}
@@ -694,8 +777,16 @@ export function MonthlyBudgetEditor() {
               )}
             </DialogTitle>
             {selectedCategory && categoryTransactions.length > 0 && (
-              <p className={cn("text-sm tabular-nums text-red-500", align)} dir="ltr">
-                −{formatCurrency(categoryTotal, currency)}
+              <p
+                className={cn(
+                  "text-sm tabular-nums",
+                  selectedIsIncome ? "text-green-600" : "text-red-500",
+                  align
+                )}
+                dir="ltr"
+              >
+                {selectedIsIncome ? "+" : "−"}
+                {formatCurrency(categoryTotal, currency)}
                 <span className="text-muted-foreground ms-2">
                   · {t.monthly_budget_tx_count.replace("{count}", String(categoryTransactions.length))}
                 </span>

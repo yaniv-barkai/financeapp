@@ -8,6 +8,8 @@ export interface ScrapedRow {
   merchantDisplay: string;
   merchantNormalized: string;
   sourceKey: string;
+  /** Key under the billing date — how syncs before purchase-date mapping stored this row. */
+  legacySourceKey?: string;
   note?: string;
   installments?: { number: number; total: number };
   originalAmount?: number;

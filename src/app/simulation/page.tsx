@@ -450,7 +450,7 @@ export default function SimulationPage() {
           <TabsTrigger value="payoff">{t.simulation_tab_payoff}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="payoff" className="mt-4">
+        <TabsContent value="payoff" forceMount className="mt-4 data-[state=inactive]:hidden">
           <DebtPayoffPanel budgetSimNet={simNet} />
         </TabsContent>
 

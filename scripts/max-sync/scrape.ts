@@ -46,22 +46,33 @@ function toScrapedRow(input: {
   note?: string;
   installments?: { number: number; total: number };
   originalAmount?: number;
+  billingDate?: Date;
 }): ScrapedRow | null {
   const merchantNormalized = normalizeMerchant(input.merchantDisplay);
   if (!merchantNormalized) return null;
 
   const canonicalDate = toIsraelMidnight(input.date);
+  const sourceKey = buildSourceKey(
+    canonicalDate,
+    input.amount,
+    merchantNormalized,
+    input.installments
+  );
+  const legacySourceKey = input.billingDate
+    ? buildSourceKey(
+        toIsraelMidnight(input.billingDate),
+        input.amount,
+        merchantNormalized,
+        input.installments
+      )
+    : undefined;
   return {
     date: canonicalDate,
     amount: input.amount,
     merchantDisplay: input.merchantDisplay,
     merchantNormalized,
-    sourceKey: buildSourceKey(
-      canonicalDate,
-      input.amount,
-      merchantNormalized,
-      input.installments
-    ),
+    sourceKey,
+    ...(legacySourceKey && legacySourceKey !== sourceKey ? { legacySourceKey } : {}),
     ...(input.note ? { note: input.note } : {}),
     ...(input.installments ? { installments: input.installments } : {}),
     ...(input.originalAmount != null
@@ -89,12 +100,16 @@ function mapFromRawBodies(bodies: unknown[]): ScrapedRow[] {
 function mapFromScraperTxns(txns: ScraperTransaction[]): ScrapedRow[] {
   const rows: ScrapedRow[] = [];
   for (const tx of txns) {
-    const date = parseScraperDate(tx.processedDate) ?? parseScraperDate(tx.date);
+    const installments = tx.installments;
+    const purchaseDate = parseScraperDate(tx.date);
+    const billingDate = parseScraperDate(tx.processedDate);
+    const date = installments
+      ? billingDate ?? purchaseDate
+      : purchaseDate ?? billingDate;
     const amount = parseAmount(tx);
     if (!date || !amount) continue;
 
     const merchantDisplay = (tx.description || tx.memo || "Unknown").trim();
-    const installments = tx.installments;
     const originalAbs =
       tx.originalAmount != null ? Math.abs(Number(tx.originalAmount)) : undefined;
     const note =
@@ -112,6 +127,7 @@ function mapFromScraperTxns(txns: ScraperTransaction[]): ScrapedRow[] {
         originalAbs != null && Math.abs(originalAbs - amount) >= 0.005
           ? originalAbs
           : undefined,
+      ...(billingDate && billingDate !== date ? { billingDate } : {}),
     });
     if (row) rows.push(row);
   }

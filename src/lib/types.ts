@@ -35,7 +35,9 @@ export interface MonthlyBudget {
   monthKey: string;
   /** categoryId → budget amount for that month */
   amounts: Record<string, number>;
-  /** Planned monthly income for this month (optional; UI falls back to recurring). */
+  /** Income categoryId → planned income for that month */
+  incomeAmounts?: Record<string, number>;
+  /** Planned monthly income total (sum of incomeAmounts when present; readers fall back to recurring). */
   income?: number;
   updatedAt?: Timestamp;
   createdAt?: Timestamp;
@@ -126,6 +128,7 @@ export interface Simulation {
 }
 
 export type DebtStatus = "open" | "paid";
+export type DebtInterestType = "fixed" | "prime";
 
 /** Real obligation: bank loan, family loan, unpaid bill, etc. */
 export interface Debt {
@@ -134,8 +137,16 @@ export interface Debt {
   balance: number;
   /** 0 = no fixed monthly obligation */
   monthlyPayment: number;
+  /** "prime" = Israeli prime + primeMargin; "fixed" = annualInterestRate */
+  interestType: DebtInterestType;
+  /** Fixed annual interest rate in percent (e.g. 6.5); 0 = interest-free */
+  annualInterestRate: number;
+  /** Percent over prime (negative = prime minus); used when interestType is "prime" */
+  primeMargin: number;
   /** User forces this debt into snowball phase 1 */
   forcePhase1: boolean;
+  /** Manual position in the pay-off order (lower = paid first); missing = after ordered debts */
+  payoffOrder?: number;
   /** Linked auto-managed recurring (expense), if monthlyPayment > 0 */
   recurringId?: string;
   /** Sample / payment txs (like Task.transactionIds) */
@@ -144,6 +155,8 @@ export interface Debt {
   matchMerchants: string[];
   categoryId?: string;
   note?: string;
+  /** Optional pay-by date "YYYY-MM-DD" (fines, family loans); "" or missing = none */
+  dueDate?: string;
   status: DebtStatus;
   createdAt: Timestamp;
 }
@@ -152,8 +165,10 @@ export interface SnowballOneTimeIncome {
   id: string;
   label: string;
   amount: number;
-  /** Apply once when projection month equals this (0 = first month) */
+  /** Apply once when projection month equals this (0 = first month); derived from applyMonth on load */
   applyAfterMonths: number;
+  /** Calendar month the money arrives, "YYYY-MM" */
+  applyMonth?: string;
 }
 
 /** Snowball simulator settings (one doc per book). */

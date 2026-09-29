@@ -77,5 +77,24 @@ assert.equal(standing.length, 1);
 assert.equal(standing[0].amount, 605.46);
 assert.equal(standing[0].note, "הוראת קבע");
 assert.equal(standing[0].installments, undefined);
+assert.equal(standing[0].date.toISOString().slice(0, 10), "2026-07-06");
+
+// Installment rows keep their billing date and carry no separate billingDate
+assert.equal(mapped[1].billingDate, undefined);
+
+// Regular purchase billed next month stays in the purchase month
+const purchase = mapMaxRawTransactions([
+  {
+    merchantName: "שופרסל דיל",
+    actualPaymentAmount: 312.4,
+    originalAmount: 312.4,
+    comments: "",
+    purchaseDate: "2026-09-24T00:00:00",
+    paymentDate: "2026-10-10T00:00:00",
+  },
+]);
+assert.equal(purchase.length, 1);
+assert.equal(purchase[0].date.toISOString().slice(0, 10), "2026-09-24");
+assert.equal(purchase[0].billingDate?.toISOString().slice(0, 10), "2026-10-10");
 
 console.log("max-installments tests passed");

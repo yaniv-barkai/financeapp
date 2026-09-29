@@ -76,6 +76,7 @@ async function main() {
     const seenInBatch = new Set<string>();
     const newRows = scraped.filter((r) => {
       if (existingKeys.has(r.sourceKey) || seenInBatch.has(r.sourceKey)) return false;
+      if (r.legacySourceKey && existingKeys.has(r.legacySourceKey)) return false;
       seenInBatch.add(r.sourceKey);
       return true;
     });

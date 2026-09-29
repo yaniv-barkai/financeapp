@@ -1,11 +1,19 @@
 import { Timestamp } from "firebase/firestore";
 import { addMonths } from "date-fns";
-import { Category, Debt } from "./types";
+import { Category, Debt, Recurring } from "./types";
 import {
   addRecurring,
+  deleteRecurring,
   updateRecurring,
 } from "./firestore/recurring";
 export { isPhase1Debt } from "./snowball";
+
+const AUTO_DEBT_NOTE_PREFIX = "Auto from debt";
+
+/** True for recurrings created by syncDebtRecurring (identified by their note). */
+export function isAutoDebtRecurring(r: Pick<Recurring, "note">): boolean {
+  return r.note?.startsWith(AUTO_DEBT_NOTE_PREFIX) ?? false;
+}
 
 /** Find the seeded Debts / חובות expense category, or first expense category. */
 export function resolveDebtsCategoryId(
@@ -60,7 +68,7 @@ export async function syncDebtRecurring(
     return debt.recurringId;
   }
 
-  const noteParts = ["Auto from debt", debt.name];
+  const noteParts = [AUTO_DEBT_NOTE_PREFIX, debt.name];
   if (debt.note?.trim()) noteParts.push(debt.note.trim());
   const note = noteParts.join(" — ");
 
@@ -91,12 +99,12 @@ export async function syncDebtRecurring(
   return rid;
 }
 
-/** Deactivate linked recurring when a debt is deleted. */
-export async function deactivateDebtRecurring(
+/** Remove the linked recurring when a debt is deleted. */
+export async function deleteDebtRecurring(
   uid: string,
   bookId: string,
   recurringId: string | undefined
 ): Promise<void> {
   if (!recurringId) return;
-  await updateRecurring(uid, bookId, recurringId, { active: false });
+  await deleteRecurring(uid, bookId, recurringId);
 }

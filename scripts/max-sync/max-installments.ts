@@ -4,6 +4,10 @@
  * The upstream scraper drops Max `comments` (e.g. "תשלום 1 מתוך 3") and uses
  * purchaseDate instead of paymentDate, so future installments land on the
  * wrong month. We map from intercepted API rows instead.
+ *
+ * Dating: installment payments use paymentDate (the month each payment is
+ * billed); regular purchases use purchaseDate, so a purchase billed on the
+ * 10th of next month still counts in the month it was made.
  */
 
 export interface MaxInstallments {
@@ -29,6 +33,8 @@ export interface MappedMaxTxn {
   note?: string;
   installments?: MaxInstallments;
   originalAmount?: number;
+  /** Billing date when it differs from `date` (older syncs stored rows under it). */
+  billingDate?: Date;
 }
 
 const INSTALLMENT_RE = /תשלום\s+(\d+)\s+מתוך\s+(\d+)/;
@@ -117,19 +123,26 @@ export function mapMaxRawTxn(row: MaxRawTxn): MappedMaxTxn | null {
   const merchantDisplay = asText(row.merchantName);
   if (!merchantDisplay) return null;
 
-  const date =
-    parseMaxDate(row.paymentDate) ?? parseMaxDate(row.purchaseDate);
-  if (!date) return null;
-
   const comments = asText(row.comments);
   const installments = parseInstallmentComment(comments);
   const original = asNumber(row.originalAmount);
+
+  const purchaseDate = parseMaxDate(row.purchaseDate);
+  const paymentDate = parseMaxDate(row.paymentDate);
+  const date = installments
+    ? paymentDate ?? purchaseDate
+    : purchaseDate ?? paymentDate;
+  if (!date) return null;
 
   const mapped: MappedMaxTxn = {
     date,
     amount,
     merchantDisplay,
   };
+
+  if (paymentDate && paymentDate.getTime() !== date.getTime()) {
+    mapped.billingDate = paymentDate;
+  }
 
   if (comments) mapped.note = comments;
   if (installments) mapped.installments = installments;

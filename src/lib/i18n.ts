@@ -139,7 +139,15 @@ export interface Translations {
   monthly_budget_loading: string;
   monthly_budget_total: string;
   monthly_budget_income: string;
-  monthly_budget_income_from_recurring: string;
+  monthly_budget_income_total_hint: string;
+  monthly_budget_section_income: string;
+  monthly_budget_section_expenses: string;
+  monthly_budget_received: string;
+  monthly_budget_copy_sim: string;
+  monthly_budget_copy_sim_done: string;
+  monthly_budget_copy_sim_empty: string;
+  monthly_budget_copy_sim_whatif: string;
+  monthly_budget_copy_sim_error: string;
   monthly_budget_left: string;
   monthly_budget_not_set: string;
   monthly_budget_seeded_previous: string;
@@ -409,9 +417,45 @@ export interface Translations {
   debts_monthly_payment: string;
   debts_monthly_payment_hint: string;
   debts_monthly_badge: string;
+  debts_interest_rate: string;
+  debts_interest_rate_hint: string;
+  debts_interest_badge: string;
+  debts_interest_type_fixed: string;
+  debts_interest_type_prime: string;
+  debts_prime_label: string;
+  debts_prime_sign_toggle: string;
+  debts_prime_hint: string;
+  debts_expected_interest: string;
+  debts_expected_interest_detail: string;
+  debts_interest_never: string;
+  debts_interest_summary: string;
+  debts_interest_summary_hint: string;
+  debts_interest_months: string;
+  debts_total: string;
+  debts_total_hint: string;
+  debts_due_date: string;
+  debts_due_date_hint: string;
+  debts_due_date_clear: string;
+  debts_due_badge: string;
+  debts_due_soon: string;
+  debts_due_today: string;
+  debts_overdue: string;
+  debts_interest_ongoing_title: string;
+  debts_interest_ongoing_label: string;
+  debts_interest_ongoing_amount: string;
+  debts_interest_ongoing_hint: string;
+  debts_interest_until_paid: string;
   debts_pay_first: string;
   debts_pay_first_hint: string;
   debts_pay_first_badge: string;
+  debts_order_hint: string;
+  debts_order_no_plan: string;
+  debts_order_reset: string;
+  debts_order_drag: string;
+  debts_order_save_error: string;
+  debts_closes_badge: string;
+  payoff_order_hint: string;
+  payoff_order_change: string;
   debts_note: string;
   debts_note_placeholder: string;
   debts_category: string;
@@ -428,6 +472,7 @@ export interface Translations {
   debts_no_matching_transactions: string;
   debts_recognition_merchants: string;
   debts_recognition_hint: string;
+  debts_attach_prefill_hint: string;
   debts_save: string;
   debts_saving: string;
   debts_create: string;
@@ -468,6 +513,7 @@ export interface Translations {
   payoff_one_time_label_placeholder: string;
   payoff_one_time_amount: string;
   payoff_one_time_month: string;
+  payoff_one_time_past: string;
   payoff_one_time_remove: string;
   payoff_save_plan: string;
   payoff_saving: string;
@@ -477,15 +523,51 @@ export interface Translations {
   payoff_step1: string;
   payoff_step2: string;
   payoff_step3: string;
-  payoff_total: string;
   payoff_months: string;
-  payoff_months_done: string;
+  payoff_step_until: string;
+  payoff_step_none: string;
+  payoff_step_same_month: string;
   payoff_stuck_mins: string;
   payoff_stuck_max: string;
   payoff_ef_target: string;
   payoff_payoff_at: string;
   payoff_no_available: string;
-  payoff_per_debt: string;
+  payoff_free_by: string;
+  payoff_free_in: string;
+  payoff_debt_now: string;
+  payoff_debts_count: string;
+  payoff_balance_label: string;
+  payoff_timeline_title: string;
+  payoff_timeline_hint: string;
+  payoff_timeline_today: string;
+  payoff_timeline_fund_done: string;
+  payoff_timeline_free: string;
+  payoff_timeline_not_paid: string;
+  payoff_total_interest: string;
+  payoff_total_interest_hint: string;
+  payoff_interest_label: string;
+  payoff_after_due: string;
+  payoff_schedule_show: string;
+  payoff_schedule_title: string;
+  payoff_schedule_desc: string;
+  payoff_schedule_empty: string;
+  payoff_schedule_step1: string;
+  payoff_schedule_step2: string;
+  payoff_schedule_step3: string;
+  payoff_schedule_in: string;
+  payoff_schedule_interest: string;
+  payoff_schedule_paid: string;
+  payoff_schedule_debt_left: string;
+  payoff_schedule_available: string;
+  payoff_schedule_one_time: string;
+  payoff_schedule_col_debt: string;
+  payoff_schedule_col_start: string;
+  payoff_schedule_col_interest: string;
+  payoff_schedule_col_paid: string;
+  payoff_schedule_col_left: string;
+  payoff_schedule_paid_off: string;
+  payoff_schedule_ef: string;
+  payoff_schedule_unused: string;
 
   // Simulation page
   simulation_title: string;
@@ -793,7 +875,15 @@ const en: Translations = {
   monthly_budget_loading: "Loading budget…",
   monthly_budget_total: "Budgeted",
   monthly_budget_income: "Income",
-  monthly_budget_income_from_recurring: "From recurring — edit to override",
+  monthly_budget_income_total_hint: "Sum of income categories",
+  monthly_budget_section_income: "Income",
+  monthly_budget_section_expenses: "Expenses",
+  monthly_budget_received: "Received",
+  monthly_budget_copy_sim: "Copy from simulation",
+  monthly_budget_copy_sim_done: "Copied from your saved simulation — review and save",
+  monthly_budget_copy_sim_empty: "No saved simulation yet — save one on the Simulation page first",
+  monthly_budget_copy_sim_whatif: "{count} what-if rows aren't real categories, so they weren't copied",
+  monthly_budget_copy_sim_error: "Could not load the simulation",
   monthly_budget_left: "Left",
   monthly_budget_not_set: "Budget not set for this month yet — edit and save",
   monthly_budget_seeded_previous: "Pre-filled from last month — review and save",
@@ -1063,10 +1153,53 @@ const en: Translations = {
   debts_monthly_payment_hint:
     "If set, a recurring expense is created or updated automatically.",
   debts_monthly_badge: "Monthly payment",
+  debts_interest_rate: "Annual interest",
+  debts_interest_rate_hint: "Leave empty if this debt has no interest.",
+  debts_interest_badge: "Interest",
+  debts_interest_type_fixed: "Fixed",
+  debts_interest_type_prime: "Prime ±",
+  debts_prime_label: "Prime",
+  debts_prime_sign_toggle: "Switch between prime plus and prime minus",
+  debts_prime_hint:
+    "Prime today: {prime}% (Bank of Israel, since {date}) → your rate: {rate}%",
+  debts_expected_interest: "Expected interest",
+  debts_expected_interest_detail:
+    "Expected interest: {amount} over {n} months (paying the monthly payment only).",
+  debts_interest_never:
+    "The monthly payment doesn't cover the interest — this debt will keep growing.",
+  debts_interest_summary: "Interest until paid off",
+  debts_interest_summary_hint:
+    "Debts with a monthly payment, paying only that payment until the end. Paying faster (see Simulation) means less interest.",
+  debts_interest_months: "{n} months",
+  debts_total: "Total debts",
+  debts_total_hint: "{n} open debts · {monthly} in monthly payments",
+  debts_due_date: "Pay by (optional)",
+  debts_due_date_hint:
+    "For debts with a deadline — fines, loans from friends or family.",
+  debts_due_date_clear: "Clear date",
+  debts_due_badge: "Pay by {date}",
+  debts_due_soon: "Due in {n} days",
+  debts_due_today: "Due today",
+  debts_overdue: "Overdue since {date}",
+  debts_interest_ongoing_title: "Ongoing interest (no end date)",
+  debts_interest_ongoing_label: "Interest",
+  debts_interest_ongoing_amount: "{monthly} a month · {yearly} a year",
+  debts_interest_ongoing_hint:
+    "Debts with no monthly payment (like an overdraft) or a payment that doesn't cover the interest. This is charged every month until you pay them off — the Simulation shows the total under your pay-off plan.",
+  debts_interest_until_paid: "until paid off",
   debts_pay_first: "Pay first",
   debts_pay_first_hint:
     "Clear this debt before others in the pay-off plan (Simulation).",
   debts_pay_first_badge: "Pay first",
+  debts_order_hint:
+    "Listed in the order they'll be paid off — #1 closes first. Drag a debt by its handle to change the order; the Simulation uses the same order.",
+  debts_order_no_plan: "Save a plan in Simulation to see when each debt closes.",
+  debts_order_reset: "Reset to suggested order",
+  debts_order_drag: "Drag to change the order",
+  debts_order_save_error: "Could not save the new order",
+  debts_closes_badge: "Closes: month {n} · {date}",
+  payoff_order_hint: "Paid in the order set on the Debts page.",
+  payoff_order_change: "Change order",
   debts_note: "Note",
   debts_note_placeholder: "Optional details",
   debts_category: "Category",
@@ -1084,6 +1217,8 @@ const en: Translations = {
   debts_recognition_merchants: "Recognition merchants",
   debts_recognition_hint:
     "Attached merchants are remembered so future imports categorize to Debts.",
+  debts_attach_prefill_hint:
+    "Start here: picking a transaction fills in the name and monthly payment for you.",
   debts_save: "Save",
   debts_saving: "Saving…",
   debts_create: "Create",
@@ -1103,7 +1238,7 @@ const en: Translations = {
   debts_loading: "Loading debts…",
 
   payoff_subtitle:
-    "See how long it takes to clear your debts and build a small emergency cushion.",
+    "See how long it takes to clear your debts and build an emergency fund. Order: “Pay first” debts, then the emergency fund, then debts with interest (smallest first) and finally interest-free debts (smallest first).",
   payoff_manage_debts: "Manage debts",
   payoff_no_debts: "No open debts yet. Add them on the Debts page first.",
   payoff_loading: "Loading…",
@@ -1115,35 +1250,74 @@ const en: Translations = {
   payoff_use_budget_net: "Use net from Budget tab",
   payoff_use_budget_done: "Set from Budget tab net",
   payoff_use_budget_empty: "Budget tab has no positive net yet",
-  payoff_ef_months: "Emergency cushion (months)",
+  payoff_ef_months: "Emergency fund (months)",
   payoff_ef_months_hint: "Recommended: 3 to 6 months of income.",
-  payoff_ef_income: "Monthly income for cushion",
+  payoff_ef_income: "Monthly income for the fund",
   payoff_ef_income_hint: "Target = months × this amount.",
   payoff_one_time: "One-time money",
-  payoff_one_time_hint: "e.g. selling something — applied once after the months you set.",
+  payoff_one_time_hint: "e.g. selling something — added once, in the month you pick.",
   payoff_one_time_add: "Add",
   payoff_one_time_label: "What",
   payoff_one_time_label_placeholder: "e.g. Sell old phone",
   payoff_one_time_amount: "Amount",
-  payoff_one_time_month: "After months",
+  payoff_one_time_month: "Month",
+  payoff_one_time_past: "This month has already passed, so it isn't counted. Pick a new month.",
   payoff_one_time_remove: "Remove",
   payoff_save_plan: "Save",
   payoff_saving: "Saving…",
   payoff_plan_saved: "Plan saved",
   payoff_plan_save_error: "Could not save plan",
-  payoff_results_title: "How long each step takes",
-  payoff_step1: "Step 1 — small debts first",
-  payoff_step2: "Step 2 — emergency cushion",
-  payoff_step3: "Step 3 — remaining debts",
-  payoff_total: "Total",
+  payoff_results_title: "Plan steps",
+  payoff_step1: "Step 1 — “Pay first” debts",
+  payoff_step2: "Step 2 — emergency fund",
+  payoff_step3: "Step 3 — debts with interest, then interest-free",
   payoff_months: "{n} mo",
-  payoff_months_done: "Done",
+  payoff_step_until: "until {date}",
+  payoff_step_none: "Not needed",
+  payoff_step_same_month: "Same month",
   payoff_stuck_mins: "Available money is too low to cover monthly payments.",
   payoff_stuck_max: "Could not finish within the projection limit.",
-  payoff_ef_target: "Cushion target",
+  payoff_ef_target: "Emergency fund target",
   payoff_payoff_at: "Month {n}",
-  payoff_no_available: "Enter how much is available each month to see the timeline.",
-  payoff_per_debt: "Per debt",
+  payoff_no_available: "Enter how much is available each month to see when each debt will be paid off.",
+  payoff_free_by: "Debt-free by",
+  payoff_free_in: "in {n} months",
+  payoff_debt_now: "Debt today",
+  payoff_debts_count: "{n} open debts",
+  payoff_balance_label: "Balance",
+  payoff_timeline_title: "When each debt is paid off",
+  payoff_timeline_hint: "Tap a debt to see that month's calculation.",
+  payoff_timeline_today: "Today",
+  payoff_timeline_fund_done: "Emergency fund complete",
+  payoff_timeline_free: "Debt-free!",
+  payoff_timeline_not_paid: "Not paid off within this plan",
+  payoff_total_interest: "Total interest you'll pay",
+  payoff_total_interest_hint:
+    "Following this plan. More money each month means less interest.",
+  payoff_interest_label: "interest",
+  payoff_after_due: "Paid off after its due date ({date})",
+  payoff_schedule_show: "Show month-by-month calculation",
+  payoff_schedule_title: "Month-by-month calculation",
+  payoff_schedule_desc:
+    "Each month: interest is added, the monthly payments are made, then the rest of the money goes to the current step. Tap a month for the details.",
+  payoff_schedule_empty: "Nothing to show yet.",
+  payoff_schedule_step1: "Step 1 · Pay first",
+  payoff_schedule_step2: "Step 2 · Emergency fund",
+  payoff_schedule_step3: "Step 3 · Debts",
+  payoff_schedule_in: "In",
+  payoff_schedule_interest: "Interest",
+  payoff_schedule_paid: "Paid to debts",
+  payoff_schedule_debt_left: "Debt left",
+  payoff_schedule_available: "Available this month",
+  payoff_schedule_one_time: "One-time money",
+  payoff_schedule_col_debt: "Debt",
+  payoff_schedule_col_start: "Start",
+  payoff_schedule_col_interest: "Interest",
+  payoff_schedule_col_paid: "Paid",
+  payoff_schedule_col_left: "Left",
+  payoff_schedule_paid_off: "Paid off!",
+  payoff_schedule_ef: "Emergency fund",
+  payoff_schedule_unused: "Left over (not needed)",
 
   simulation_title: "Simulation",
   simulation_subtitle:
@@ -1447,7 +1621,15 @@ const he: Translations = {
   monthly_budget_loading: "טוען תקציב…",
   monthly_budget_total: "תוקצב",
   monthly_budget_income: "הכנסה",
-  monthly_budget_income_from_recurring: "מקבוע — ערכו כדי לדרוס",
+  monthly_budget_income_total_hint: "סכום קטגוריות ההכנסה",
+  monthly_budget_section_income: "הכנסות",
+  monthly_budget_section_expenses: "הוצאות",
+  monthly_budget_received: "התקבל",
+  monthly_budget_copy_sim: "העתק מהסימולציה",
+  monthly_budget_copy_sim_done: "הועתק מהסימולציה השמורה — בדקו ושמרו",
+  monthly_budget_copy_sim_empty: "עדיין אין סימולציה שמורה — שמרו אחת בעמוד הסימולציה",
+  monthly_budget_copy_sim_whatif: "{count} שורות ״מה אם״ אינן קטגוריות אמיתיות ולכן לא הועתקו",
+  monthly_budget_copy_sim_error: "טעינת הסימולציה נכשלה",
   monthly_budget_left: "נותר",
   monthly_budget_not_set: "עדיין לא הוגדר תקציב לחודש זה — ערכו ושמרו",
   monthly_budget_seeded_previous: "מולא לפי החודש הקודם — בדקו ושמרו",
@@ -1717,10 +1899,53 @@ const he: Translations = {
   debts_monthly_payment_hint:
     "אם מוגדר, נוצר או מתעדכן תשלום קבוע אוטומטית.",
   debts_monthly_badge: "תשלום חודשי",
+  debts_interest_rate: "ריבית שנתית",
+  debts_interest_rate_hint: "השאירו ריק אם אין ריבית על החוב.",
+  debts_interest_badge: "ריבית",
+  debts_interest_type_fixed: "קבועה",
+  debts_interest_type_prime: "פריים ±",
+  debts_prime_label: "פריים",
+  debts_prime_sign_toggle: "החלפה בין פריים פלוס לפריים מינוס",
+  debts_prime_hint:
+    "הפריים היום: {prime}% (בנק ישראל, מ-{date}) ← הריבית שלכם: {rate}%",
+  debts_expected_interest: "ריבית צפויה",
+  debts_expected_interest_detail:
+    "ריבית צפויה: {amount} לאורך {n} חודשים (בתשלום החודשי בלבד).",
+  debts_interest_never:
+    "התשלום החודשי לא מכסה את הריבית — החוב ימשיך לגדול.",
+  debts_interest_summary: "ריבית עד סגירת החובות",
+  debts_interest_summary_hint:
+    "חובות עם תשלום חודשי, אם משלמים רק אותו עד הסוף. תשלום מהיר יותר (ראו סימולציה) = פחות ריבית.",
+  debts_interest_months: "{n} חודשים",
+  debts_total: "סה״כ חובות",
+  debts_total_hint: "{n} חובות פתוחים · {monthly} בתשלומים חודשיים",
+  debts_due_date: "תאריך לתשלום (אופציונלי)",
+  debts_due_date_hint:
+    "לחובות עם תאריך יעד — קנסות, הלוואות מחברים או ממשפחה.",
+  debts_due_date_clear: "נקה תאריך",
+  debts_due_badge: "לשלם עד {date}",
+  debts_due_soon: "בעוד {n} ימים",
+  debts_due_today: "לתשלום היום",
+  debts_overdue: "באיחור מאז {date}",
+  debts_interest_ongoing_title: "ריבית שוטפת (ללא תאריך סיום)",
+  debts_interest_ongoing_label: "ריבית",
+  debts_interest_ongoing_amount: "{monthly} בחודש · {yearly} בשנה",
+  debts_interest_ongoing_hint:
+    "חובות בלי תשלום חודשי (כמו מינוס בבנק) או שהתשלום לא מכסה את הריבית. הריבית הזו נגבית כל חודש עד שסוגרים אותם — בסימולציה רואים את הסכום הכולל לפי תוכנית הסגירה.",
+  debts_interest_until_paid: "עד לסגירה",
   debts_pay_first: "לשלם קודם",
   debts_pay_first_hint:
     "לסגור את החוב הזה לפני אחרים בתוכנית הסגירה (בסימולציה).",
   debts_pay_first_badge: "לשלם קודם",
+  debts_order_hint:
+    "החובות מסודרים לפי סדר הסגירה — מס׳ 1 נסגר ראשון. גררו חוב בידית כדי לשנות את הסדר; הסימולציה משתמשת באותו סדר.",
+  debts_order_no_plan: "שמרו תוכנית בסימולציה כדי לראות מתי כל חוב נסגר.",
+  debts_order_reset: "חזרה לסדר המומלץ",
+  debts_order_drag: "גררו כדי לשנות את הסדר",
+  debts_order_save_error: "לא ניתן לשמור את הסדר החדש",
+  debts_closes_badge: "נסגר: חודש {n} · {date}",
+  payoff_order_hint: "משולם לפי הסדר שנקבע בעמוד החובות.",
+  payoff_order_change: "שינוי סדר",
   debts_note: "הערה",
   debts_note_placeholder: "פרטים אופציונליים",
   debts_category: "קטגוריה",
@@ -1738,6 +1963,8 @@ const he: Translations = {
   debts_recognition_merchants: "ספקים לזיהוי",
   debts_recognition_hint:
     "ספקים מצורפים נשמרים כדי שייבוא עתידי יסווג אוטומטית לחובות.",
+  debts_attach_prefill_hint:
+    "התחילו כאן: בחירת עסקה ממלאת עבורכם את השם והתשלום החודשי.",
   debts_save: "שמור",
   debts_saving: "שומר…",
   debts_create: "צור",
@@ -1757,7 +1984,7 @@ const he: Translations = {
   debts_loading: "טוען חובות…",
 
   payoff_subtitle:
-    "ראו כמה זמן לוקח לסגור את החובות ולבנות כרית ביטחון קטנה.",
+    "ראו כמה זמן לוקח לסגור את החובות ולבנות קרן לשעת חירום. הסדר: חובות ״לשלם קודם״, אחר כך הקרן לשעת חירום, אחר כך חובות עם ריבית (מהקטן לגדול) ולבסוף חובות בלי ריבית (מהקטן לגדול).",
   payoff_manage_debts: "ניהול חובות",
   payoff_no_debts: "אין חובות פתוחים. הוסיפו אותם קודם בעמוד החובות.",
   payoff_loading: "טוען…",
@@ -1769,35 +1996,74 @@ const he: Translations = {
   payoff_use_budget_net: "השתמש בנטו מלשונית התקציב",
   payoff_use_budget_done: "הוגדר לפי נטו לשונית התקציב",
   payoff_use_budget_empty: "בלשונית התקציב אין עדיין נטו חיובי",
-  payoff_ef_months: "כרית ביטחון (חודשים)",
+  payoff_ef_months: "קרן לשעת חירום (חודשים)",
   payoff_ef_months_hint: "מומלץ: 3 עד 6 חודשי הכנסה.",
-  payoff_ef_income: "הכנסה חודשית לכרית",
+  payoff_ef_income: "הכנסה חודשית לחישוב הקרן",
   payoff_ef_income_hint: "יעד = מספר חודשים × סכום זה.",
   payoff_one_time: "כסף חד־פעמי",
-  payoff_one_time_hint: "למשל מכירת משהו — נכנס פעם אחת אחרי מספר החודשים שתגדירו.",
+  payoff_one_time_hint: "למשל מכירת משהו — נכנס פעם אחת, בחודש שתבחרו.",
   payoff_one_time_add: "הוסף",
   payoff_one_time_label: "מה",
   payoff_one_time_label_placeholder: "לדוגמה: מכירת טלפון ישן",
   payoff_one_time_amount: "סכום",
-  payoff_one_time_month: "אחרי חודשים",
+  payoff_one_time_month: "חודש",
+  payoff_one_time_past: "החודש הזה כבר עבר ולכן לא נספר. בחרו חודש חדש.",
   payoff_one_time_remove: "הסר",
   payoff_save_plan: "שמור",
   payoff_saving: "שומר…",
   payoff_plan_saved: "התוכנית נשמרה",
   payoff_plan_save_error: "לא ניתן לשמור את התוכנית",
-  payoff_results_title: "כמה זמן לוקח כל שלב",
-  payoff_step1: "שלב 1 — חובות קטנים קודם",
-  payoff_step2: "שלב 2 — כרית ביטחון",
-  payoff_step3: "שלב 3 — שאר החובות",
-  payoff_total: "סה״כ",
+  payoff_results_title: "שלבי התוכנית",
+  payoff_step1: "שלב 1 — חובות ״לשלם קודם״",
+  payoff_step2: "שלב 2 — קרן לשעת חירום",
+  payoff_step3: "שלב 3 — חובות עם ריבית, אחר כך בלי ריבית",
   payoff_months: "{n} ח׳",
-  payoff_months_done: "הושלם",
+  payoff_step_until: "עד {date}",
+  payoff_step_none: "לא נדרש",
+  payoff_step_same_month: "באותו חודש",
   payoff_stuck_mins: "הסכום הפנוי נמוך מדי לכיסוי התשלומים החודשיים.",
   payoff_stuck_max: "לא ניתן להשלים בתוך מגבלת הסימולציה.",
-  payoff_ef_target: "יעד כרית הביטחון",
+  payoff_ef_target: "יעד הקרן לשעת חירום",
   payoff_payoff_at: "חודש {n}",
-  payoff_no_available: "הזינו כמה פנוי בכל חודש כדי לראות את לוח הזמנים.",
-  payoff_per_debt: "לפי חוב",
+  payoff_no_available: "הזינו כמה פנוי בכל חודש כדי לראות מתי כל חוב ייסגר.",
+  payoff_free_by: "סוף החובות",
+  payoff_free_in: "בעוד {n} חודשים",
+  payoff_debt_now: "חוב היום",
+  payoff_debts_count: "{n} חובות פתוחים",
+  payoff_balance_label: "יתרה",
+  payoff_timeline_title: "מתי כל חוב נסגר",
+  payoff_timeline_hint: "הקישו על חוב כדי לראות את החישוב של אותו חודש.",
+  payoff_timeline_today: "היום",
+  payoff_timeline_fund_done: "הקרן לשעת חירום מלאה",
+  payoff_timeline_free: "חופשיים מחובות!",
+  payoff_timeline_not_paid: "לא נסגרים בתוכנית הזו",
+  payoff_total_interest: "סה״כ ריבית שתשלמו",
+  payoff_total_interest_hint:
+    "לפי התוכנית הזו. יותר כסף בכל חודש = פחות ריבית.",
+  payoff_interest_label: "ריבית",
+  payoff_after_due: "ייסגר אחרי תאריך היעד ({date})",
+  payoff_schedule_show: "הצג חישוב חודש אחר חודש",
+  payoff_schedule_title: "חישוב חודש אחר חודש",
+  payoff_schedule_desc:
+    "בכל חודש: מתווספת ריבית, משולמים התשלומים החודשיים, ושאר הכסף הולך לשלב הנוכחי. הקישו על חודש לפירוט.",
+  payoff_schedule_empty: "אין עדיין מה להציג.",
+  payoff_schedule_step1: "שלב 1 · לשלם קודם",
+  payoff_schedule_step2: "שלב 2 · קרן לשעת חירום",
+  payoff_schedule_step3: "שלב 3 · חובות",
+  payoff_schedule_in: "נכנס",
+  payoff_schedule_interest: "ריבית",
+  payoff_schedule_paid: "שולם לחובות",
+  payoff_schedule_debt_left: "חוב שנותר",
+  payoff_schedule_available: "פנוי החודש",
+  payoff_schedule_one_time: "כסף חד־פעמי",
+  payoff_schedule_col_debt: "חוב",
+  payoff_schedule_col_start: "התחלה",
+  payoff_schedule_col_interest: "ריבית",
+  payoff_schedule_col_paid: "שולם",
+  payoff_schedule_col_left: "נותר",
+  payoff_schedule_paid_off: "נסגר!",
+  payoff_schedule_ef: "קרן לשעת חירום",
+  payoff_schedule_unused: "נשאר (לא נדרש)",
 
   simulation_title: "סימולציה",
   simulation_subtitle:

@@ -28,6 +28,8 @@ import {
   toMonthlyRecurringAmount,
 } from "@/lib/firestore/recurring";
 import { addTransaction, getTransactionsByMonth } from "@/lib/firestore/transactions";
+import { getDebts } from "@/lib/firestore/debts";
+import { isAutoDebtRecurring } from "@/lib/debt-recurring";
 import { Recurring } from "@/lib/types";
 import {
   cn,
@@ -81,6 +83,15 @@ function nextRunDate(cadence: Recurring["cadence"]): Date {
   }
 }
 
+/** Regular items first, debt payments last; each group by amount, highest first. */
+function sortRecurrings(items: Recurring[], debtRecurringIds: Set<string>): Recurring[] {
+  return [...items].sort((a, b) => {
+    const debtDiff =
+      Number(debtRecurringIds.has(a.id)) - Number(debtRecurringIds.has(b.id));
+    return debtDiff || b.amount - a.amount;
+  });
+}
+
 const BLANK: Omit<Recurring, "id" | "createdAt"> = {
   type: "expense",
   amount: 0,
@@ -128,10 +139,20 @@ export default function RecurringPage() {
     );
   };
 
+  const fetchSortedRecurrings = async (uid: string, bookId: string) => {
+    const [data, debts] = await Promise.all([getRecurring(uid, bookId), getDebts(uid, bookId)]);
+    const debtRecurringIds = new Set(
+      debts.map((d) => d.recurringId).filter((id): id is string => !!id)
+    );
+    const orphaned = data.filter((r) => isAutoDebtRecurring(r) && !debtRecurringIds.has(r.id));
+    await Promise.all(orphaned.map((r) => deleteRecurring(uid, bookId, r.id)));
+    const remaining = data.filter((r) => !orphaned.includes(r));
+    return sortRecurrings(remaining, debtRecurringIds);
+  };
+
   const loadData = async () => {
     if (!user || !activeBookId) return;
-    const data = await getRecurring(user.uid, activeBookId);
-    const sorted = data.sort((a, b) => a.cadence.localeCompare(b.cadence));
+    const sorted = await fetchSortedRecurrings(user.uid, activeBookId);
     setRecurrings(sorted);
     await loadSuggestions(sorted, dismissed);
   };
@@ -141,8 +162,7 @@ export default function RecurringPage() {
     const fps = loadDismissedSuggestions(activeBookId);
     setDismissed(fps);
     (async () => {
-      const data = await getRecurring(user.uid, activeBookId);
-      const sorted = data.sort((a, b) => a.cadence.localeCompare(b.cadence));
+      const sorted = await fetchSortedRecurrings(user.uid, activeBookId);
       setRecurrings(sorted);
       await loadSuggestions(sorted, fps);
     })();

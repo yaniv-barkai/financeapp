@@ -52,7 +52,6 @@ export async function saveSimulation(
       whatIfCategories: data.whatIfCategories,
       whatIfAmounts: data.whatIfAmounts,
       updatedAt: serverTimestamp(),
-    }),
-    { merge: true }
+    })
   );
 }
