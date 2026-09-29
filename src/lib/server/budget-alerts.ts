@@ -5,93 +5,27 @@ import {
   computeExpenseByCategory,
   findNewThresholdCrossings,
 } from "@/lib/budget";
-import { Category, Transaction, UserSettings } from "@/lib/types";
+import { UserSettings } from "@/lib/types";
 import {
   daysUntilMonthEnd,
   getMonthKey,
   getMonthRange,
   getNextMonthKey,
-  getPrevMonthKey,
 } from "@/lib/utils";
 import {
   buildGuideEmailDigest,
   persistGuideEmailState,
 } from "@/lib/server/guide-alerts";
+import {
+  loadCategories,
+  loadLimits,
+  loadMonthTransactions,
+  loadMonthlyBudgetAmounts,
+} from "@/lib/server/finance-data";
 
 const DEFAULT_THRESHOLDS = [80, 100];
 const UNSET_BUDGET_ALERT_DAYS = 7;
 const UNSET_BUDGET_STATE_ID = "unset_next_month";
-
-function parseLimitDoc(data: Record<string, unknown>): number {
-  if (data.budgetAmount !== undefined) {
-    const amount = data.budgetAmount as number;
-    const period = (data.budgetPeriod as string) ?? "monthly";
-    return period === "yearly" ? amount / 12 : amount;
-  }
-  return (data.monthlyLimit as number) ?? 0;
-}
-
-async function loadCategories(uid: string, bookId: string): Promise<Category[]> {
-  const snap = await getAdminFirestore()
-    .collection(`users/${uid}/books/${bookId}/categories`)
-    .orderBy("order")
-    .get();
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Category);
-}
-
-async function loadMonthlyBudgetAmounts(
-  uid: string,
-  bookId: string,
-  monthKey: string
-): Promise<Record<string, number> | null> {
-  const snap = await getAdminFirestore()
-    .doc(`users/${uid}/books/${bookId}/monthlyBudgets/${monthKey}`)
-    .get();
-  if (!snap.exists) return null;
-  const amounts = (snap.data()?.amounts as Record<string, number>) ?? {};
-  const cleaned: Record<string, number> = {};
-  for (const [catId, amount] of Object.entries(amounts)) {
-    if (typeof amount === "number" && amount > 0) cleaned[catId] = amount;
-  }
-  return Object.keys(cleaned).length > 0 ? cleaned : null;
-}
-
-async function loadLegacyLimits(
-  uid: string,
-  bookId: string,
-  categories: Category[]
-): Promise<Record<string, number>> {
-  const db = getAdminFirestore();
-  const limits: Record<string, number> = {};
-  await Promise.all(
-    categories.map(async (c) => {
-      const snap = await db
-        .doc(`users/${uid}/books/${bookId}/categories/${c.id}/limits/default`)
-        .get();
-      if (snap.exists) {
-        const monthly = parseLimitDoc(snap.data() as Record<string, unknown>);
-        if (monthly > 0) limits[c.id] = monthly;
-      }
-    })
-  );
-  return limits;
-}
-
-/** Prefer this month's monthly budget, else previous month, else legacy limits. */
-async function loadLimits(
-  uid: string,
-  bookId: string,
-  monthKey: string,
-  categories: Category[]
-): Promise<Record<string, number>> {
-  const current = await loadMonthlyBudgetAmounts(uid, bookId, monthKey);
-  if (current) return current;
-
-  const prev = await loadMonthlyBudgetAmounts(uid, bookId, getPrevMonthKey(monthKey));
-  if (prev) return prev;
-
-  return loadLegacyLimits(uid, bookId, categories);
-}
 
 async function isMonthlyBudgetSet(
   uid: string,
@@ -100,22 +34,6 @@ async function isMonthlyBudgetSet(
 ): Promise<boolean> {
   const amounts = await loadMonthlyBudgetAmounts(uid, bookId, monthKey);
   return amounts !== null;
-}
-
-async function loadMonthTransactions(
-  uid: string,
-  bookId: string,
-  start: Date,
-  end: Date
-): Promise<Transaction[]> {
-  const snap = await getAdminFirestore()
-    .collection(`users/${uid}/books/${bookId}/transactions`)
-    .where("date", ">=", Timestamp.fromDate(start))
-    .where("date", "<=", Timestamp.fromDate(end))
-    .orderBy("date", "desc")
-    .get();
-
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Transaction);
 }
 
 async function loadAlertState(

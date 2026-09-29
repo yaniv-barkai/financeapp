@@ -218,6 +218,27 @@ export interface Translations {
   settings_alerts_email_placeholder: string;
   settings_alerts_saved: string;
 
+  settings_ai_title: string;
+  settings_ai_description: string;
+  settings_ai_new_token: string;
+  settings_ai_token_name_placeholder: string;
+  settings_ai_scope_read: string;
+  settings_ai_scope_write: string;
+  settings_ai_scope_write_hint: string;
+  settings_ai_create: string;
+  settings_ai_token_once: string;
+  settings_ai_copy_token: string;
+  settings_ai_last_used: string;
+  settings_ai_never_used: string;
+  settings_ai_revoke: string;
+  settings_ai_revoke_title: string;
+  settings_ai_revoke_confirm: string;
+  settings_ai_connect_title: string;
+  settings_ai_endpoint: string;
+  settings_ai_cursor: string;
+  settings_ai_claude: string;
+  settings_ai_chatgpt_note: string;
+
   // Login page
   login_title: string;
   login_sign_in_description: string;
@@ -953,6 +974,27 @@ const en: Translations = {
   settings_alerts_email_override: "Alert email (optional)",
   settings_alerts_email_placeholder: "Defaults to your login email",
   settings_alerts_saved: "Alert settings saved",
+
+  settings_ai_title: "AI assistants (MCP)",
+  settings_ai_description: "Let AI assistants like Claude, Cursor or LM Studio read your finances — and optionally add transactions and tasks — through a personal access token.",
+  settings_ai_new_token: "New access token",
+  settings_ai_token_name_placeholder: "e.g. Claude on my laptop",
+  settings_ai_scope_read: "Read only",
+  settings_ai_scope_write: "Read + Write",
+  settings_ai_scope_write_hint: "Write tokens can add transactions, change a transaction's category, note or tags, and create or complete tasks. They cannot delete anything.",
+  settings_ai_create: "Create token",
+  settings_ai_token_once: "Copy this token now — it won't be shown again. The snippets below already include it.",
+  settings_ai_copy_token: "Access token",
+  settings_ai_last_used: "Last used",
+  settings_ai_never_used: "never",
+  settings_ai_revoke: "Revoke",
+  settings_ai_revoke_title: "Revoke \"{name}\"?",
+  settings_ai_revoke_confirm: "Any AI assistant using this token will lose access immediately.",
+  settings_ai_connect_title: "Connect an assistant",
+  settings_ai_endpoint: "MCP endpoint",
+  settings_ai_cursor: "Cursor / LM Studio (mcp.json)",
+  settings_ai_claude: "Claude Desktop (claude_desktop_config.json)",
+  settings_ai_chatgpt_note: "ChatGPT and Claude.ai web connectors require OAuth sign-in, which isn't supported yet — use a desktop app for now.",
 
   login_title: "FinanceApp",
   login_sign_in_description: "Sign in to your account",
@@ -1699,6 +1741,27 @@ const he: Translations = {
   settings_alerts_email_override: "מייל להתראות (אופציונלי)",
   settings_alerts_email_placeholder: "ברירת מחדל: מייל ההתחברות",
   settings_alerts_saved: "הגדרות ההתראות נשמרו",
+
+  settings_ai_title: "עוזרי AI ‏(MCP)",
+  settings_ai_description: "אפשר לעוזרי AI כמו Claude, ‏Cursor או LM Studio לקרוא את הנתונים הפיננסיים שלך — ואם תרצה גם להוסיף עסקאות ומשימות — באמצעות טוקן גישה אישי.",
+  settings_ai_new_token: "טוקן גישה חדש",
+  settings_ai_token_name_placeholder: "למשל: Claude במחשב הנייד",
+  settings_ai_scope_read: "קריאה בלבד",
+  settings_ai_scope_write: "קריאה + כתיבה",
+  settings_ai_scope_write_hint: "טוקן כתיבה יכול להוסיף עסקאות, לשנות קטגוריה, הערה או תגיות של עסקה, וליצור או לסגור משימות. הוא לא יכול למחוק דבר.",
+  settings_ai_create: "צור טוקן",
+  settings_ai_token_once: "העתק את הטוקן עכשיו — הוא לא יוצג שוב. קטעי ההגדרה למטה כבר כוללים אותו.",
+  settings_ai_copy_token: "טוקן גישה",
+  settings_ai_last_used: "שימוש אחרון",
+  settings_ai_never_used: "אף פעם",
+  settings_ai_revoke: "בטל",
+  settings_ai_revoke_title: "לבטל את \"{name}\"?",
+  settings_ai_revoke_confirm: "כל עוזר AI שמשתמש בטוקן הזה יאבד גישה מיד.",
+  settings_ai_connect_title: "חיבור עוזר",
+  settings_ai_endpoint: "כתובת MCP",
+  settings_ai_cursor: "Cursor / LM Studio ‏(mcp.json)",
+  settings_ai_claude: "Claude Desktop ‏(claude_desktop_config.json)",
+  settings_ai_chatgpt_note: "חיבורי הרשת של ChatGPT ו-Claude.ai דורשים התחברות OAuth שעדיין לא נתמכת — בינתיים השתמש באפליקציית דסקטופ.",
 
   login_title: "FinanceApp",
   login_sign_in_description: "התחבר לחשבונך",

@@ -2,6 +2,13 @@
 
 Newest first. Format: `vMAJOR.MINOR` (two-digit minor). See `.cursor/rules/versioning.mdc`.
 
+## v1.08 — 2026-09-29
+
+- You can now connect AI assistants (Claude Desktop, Cursor, LM Studio and other MCP apps) to your finances. In Settings → "AI assistants (MCP)", create a personal access token and paste the ready-made config snippet into your assistant.
+- Assistants can look up your books, categories and transactions, get a monthly summary with budget vs. actual, and see your recurring items, debts with the pay-off plan, and tasks.
+- Choose "Read only" or "Read + Write" per token. Write tokens can add transactions, change a transaction's category, note or tags, and create or complete tasks. They can't delete anything. You can revoke a token at any time, and it stops working right away.
+- ChatGPT and Claude.ai web connectors need OAuth sign-in, which isn't supported yet. Use a desktop app for now.
+
 ## v1.07 — 2026-09-27
 
 - The Debts page now opens with your total debt (sum of open balances, number of debts, and total monthly payments), with the interest totals right under it. The list is in pay-off order — #1 is the first debt to close. The suggested order is "Pay first" debts, then debts with interest (smallest first), then interest-free debts (smallest first).

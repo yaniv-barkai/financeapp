@@ -30,6 +30,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AiAssistantsCard } from "@/components/settings/AiAssistantsCard";
 import type { AlertSettings, MaxSyncSettings } from "@/lib/types";
 import { useConfirm } from "@/components/providers/ConfirmProvider";
 import { toast } from "sonner";
@@ -369,6 +370,8 @@ export default function SettingsPage() {
           </Button>
         </CardContent>
       </Card>
+
+      <AiAssistantsCard />
 
       {/* Merchant Memory */}
       <Card>
