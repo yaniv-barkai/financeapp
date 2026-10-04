@@ -179,6 +179,9 @@ export interface Translations {
   settings_title: string;
   settings_preferences: string;
   settings_currency: string;
+  settings_month_start: string;
+  settings_month_start_desc: string;
+  settings_month_start_option: string;
   settings_language: string;
   settings_books: string;
   settings_books_description: string;
@@ -626,6 +629,18 @@ export interface Translations {
   simulation_total_income: string;
   simulation_total_expenses: string;
   simulation_total_net: string;
+  simulation_section_debts: string;
+  simulation_debts_hint: string;
+  simulation_debts_fill: string;
+  simulation_debts_filled: string;
+  simulation_col_debt: string;
+  simulation_debt_balance: string;
+  simulation_debts_required: string;
+  simulation_debts_available: string;
+  simulation_debts_available_hint: string;
+  simulation_debts_covered: string;
+  simulation_debts_short: string;
+  simulation_debts_below_required: string;
 
   // Transaction form
   form_add_title: string;
@@ -936,6 +951,9 @@ const en: Translations = {
   settings_title: "Settings",
   settings_preferences: "Preferences",
   settings_currency: "Currency",
+  settings_month_start: "Month starts on",
+  settings_month_start_desc: "Set this to your credit card billing day (e.g. the 10th) and the Dashboard and Transactions will show each month from that day to the day before it in the next month, instead of the calendar month.",
+  settings_month_start_option: "Day {n}",
   settings_language: "Language",
   settings_books: "Books",
   settings_books_description: "Manage your financial books (e.g. Personal, Business).",
@@ -1289,9 +1307,9 @@ const en: Translations = {
   payoff_available_monthly: "Available each month",
   payoff_available_monthly_hint:
     "How much you can put toward debts and savings each month. Change this number to see how the timeline changes.",
-  payoff_use_budget_net: "Use net from Budget tab",
-  payoff_use_budget_done: "Set from Budget tab net",
-  payoff_use_budget_empty: "Budget tab has no positive net yet",
+  payoff_use_budget_net: "Use what's left for debts in the Budget tab",
+  payoff_use_budget_done: "Set from what's left for debts in the Budget tab",
+  payoff_use_budget_empty: "The Budget tab leaves nothing for debts yet",
   payoff_ef_months: "Emergency fund (months)",
   payoff_ef_months_hint: "Recommended: 3 to 6 months of income.",
   payoff_ef_income: "Monthly income for the fund",
@@ -1375,7 +1393,7 @@ const en: Translations = {
   simulation_reset: "Reset",
   simulation_reset_confirm_title: "Reset simulation?",
   simulation_reset_confirm:
-    "This clears your simulated amounts and what-if categories, then re-seeds from recurring (or last month).",
+    "This clears your simulated amounts and what-if categories, then re-seeds from recurring (or last month) and your debts' monthly payments.",
   simulation_cancel: "Cancel",
   simulation_add: "Add",
   simulation_add_whatif: "Add what-if",
@@ -1399,6 +1417,20 @@ const en: Translations = {
   simulation_total_income: "Income",
   simulation_total_expenses: "Expenses",
   simulation_total_net: "Net",
+  simulation_section_debts: "Debt payments",
+  simulation_debts_hint:
+    "Filled in from each open debt's monthly payment. Change a row to try a different payment.",
+  simulation_debts_fill: "Fill from debts",
+  simulation_debts_filled: "Debt payments filled from your debts",
+  simulation_col_debt: "Debt",
+  simulation_debt_balance: "Balance {amount}",
+  simulation_debts_required: "Monthly debt payments needed",
+  simulation_debts_available: "Left for debts",
+  simulation_debts_available_hint: "Income minus all other expenses",
+  simulation_debts_covered: "You can make the monthly debt payments, with {amount} to spare.",
+  simulation_debts_short: "You're {amount} a month short of the monthly debt payments.",
+  simulation_debts_below_required:
+    "Your simulated debt payments are {amount} below what your debts need each month.",
 
   form_add_title: "Add Transaction",
   form_expense: "Expense",
@@ -1703,6 +1735,9 @@ const he: Translations = {
   settings_title: "הגדרות",
   settings_preferences: "העדפות",
   settings_currency: "מטבע",
+  settings_month_start: "החודש מתחיל ב־",
+  settings_month_start_desc: "הגדר כאן את יום החיוב של כרטיס האשראי (למשל ה־10), ולוח הבקרה והעסקאות יציגו כל חודש מהיום הזה ועד היום שלפניו בחודש הבא, במקום החודש הקלנדרי.",
+  settings_month_start_option: "{n} בחודש",
   settings_language: "שפה",
   settings_books: "ספרים",
   settings_books_description: "נהל את ספרי הכספים שלך (לדוגמה: אישי, עסקי).",
@@ -2056,9 +2091,9 @@ const he: Translations = {
   payoff_available_monthly: "פנוי בכל חודש",
   payoff_available_monthly_hint:
     "כמה אפשר להפנות לחובות ולחיסכון בכל חודש. שנו את המספר כדי לראות איך הזמן משתנה.",
-  payoff_use_budget_net: "השתמש בנטו מלשונית התקציב",
-  payoff_use_budget_done: "הוגדר לפי נטו לשונית התקציב",
-  payoff_use_budget_empty: "בלשונית התקציב אין עדיין נטו חיובי",
+  payoff_use_budget_net: "השתמש במה שנשאר לחובות בלשונית התקציב",
+  payoff_use_budget_done: "הוגדר לפי מה שנשאר לחובות בלשונית התקציב",
+  payoff_use_budget_empty: "בלשונית התקציב לא נשאר עדיין כסף לחובות",
   payoff_ef_months: "קרן לשעת חירום (חודשים)",
   payoff_ef_months_hint: "מומלץ: 3 עד 6 חודשי הכנסה.",
   payoff_ef_income: "הכנסה חודשית לחישוב הקרן",
@@ -2142,7 +2177,7 @@ const he: Translations = {
   simulation_reset: "איפוס",
   simulation_reset_confirm_title: "לאפס את הסימולציה?",
   simulation_reset_confirm:
-    "פעולה זו תמחק את הסכומים והקטגוריות ההיפותטיות ותמלא מחדש לפי תשלומים קבועים (או החודש הקודם).",
+    "פעולה זו תמחק את הסכומים והקטגוריות ההיפותטיות ותמלא מחדש לפי תשלומים קבועים (או החודש הקודם) והתשלומים החודשיים של החובות.",
   simulation_cancel: "ביטול",
   simulation_add: "הוסף",
   simulation_add_whatif: "הוסף היפותטי",
@@ -2166,6 +2201,20 @@ const he: Translations = {
   simulation_total_income: "הכנסות",
   simulation_total_expenses: "הוצאות",
   simulation_total_net: "נטו",
+  simulation_section_debts: "תשלומי חובות",
+  simulation_debts_hint:
+    "ממולא לפי התשלום החודשי של כל חוב פתוח. שנו שורה כדי לנסות תשלום אחר.",
+  simulation_debts_fill: "מלא מהחובות",
+  simulation_debts_filled: "תשלומי החובות מולאו לפי החובות שלך",
+  simulation_col_debt: "חוב",
+  simulation_debt_balance: "יתרה {amount}",
+  simulation_debts_required: "תשלומי חובות נדרשים בחודש",
+  simulation_debts_available: "נשאר לחובות",
+  simulation_debts_available_hint: "הכנסות פחות כל שאר ההוצאות",
+  simulation_debts_covered: "אפשר לעמוד בתשלומי החובות החודשיים, ונשארים {amount}.",
+  simulation_debts_short: "חסרים {amount} בחודש כדי לעמוד בתשלומי החובות.",
+  simulation_debts_below_required:
+    "תשלומי החובות בסימולציה נמוכים ב-{amount} ממה שהחובות דורשים בכל חודש.",
 
   form_add_title: "הוסף עסקה",
   form_expense: "הוצאה",

@@ -72,11 +72,11 @@ const STEP_COLORS = {
 } as const;
 
 type Props = {
-  /** Net from the budget simulation tab (income − expenses). */
-  budgetSimNet: number;
+  /** Budget tab income minus every expense except debt payments (the money that pays minimums + extra). */
+  budgetForDebts: number;
 };
 
-export function DebtPayoffPanel({ budgetSimNet }: Props) {
+export function DebtPayoffPanel({ budgetForDebts }: Props) {
   const { user } = useAuth();
   const { activeBookId, currency } = useAppStore();
   const { t, locale } = useLocale();
@@ -221,7 +221,7 @@ export function DebtPayoffPanel({ budgetSimNet }: Props) {
   };
 
   const useBudgetNet = () => {
-    const net = Math.round(budgetSimNet);
+    const net = Math.round(budgetForDebts);
     if (net <= 0) {
       toast.info(t.payoff_use_budget_empty);
       return;

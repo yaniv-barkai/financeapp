@@ -19,6 +19,7 @@ interface AppState {
   tags: Tag[];
   currency: string;
   activeMonth: string;
+  monthStartDay: number;
   txVersion: number;
   dashboardSectionOrder: DashboardSectionId[];
 
@@ -29,6 +30,7 @@ interface AppState {
   setTags: (tags: Tag[]) => void;
   setCurrency: (c: string) => void;
   setActiveMonth: (m: string) => void;
+  setMonthStartDay: (day: number) => void;
   bumpTxVersion: () => void;
   setDashboardSectionOrder: (order: DashboardSectionId[]) => void;
 }
@@ -77,6 +79,7 @@ export const useAppStore = create<AppState>()(
       tags: [],
       currency: "USD",
       activeMonth: currentMonthKey(),
+      monthStartDay: 1,
       txVersion: 0,
       dashboardSectionOrder: DEFAULT_DASHBOARD_ORDER,
 
@@ -87,6 +90,7 @@ export const useAppStore = create<AppState>()(
       setTags: (tags) => set({ tags }),
       setCurrency: (c) => set({ currency: c }),
       setActiveMonth: (m) => set({ activeMonth: m }),
+      setMonthStartDay: (day) => set({ monthStartDay: day }),
       bumpTxVersion: () => set((s) => ({ txVersion: s.txVersion + 1 })),
       setDashboardSectionOrder: (order) => set({ dashboardSectionOrder: order }),
     }),
@@ -97,6 +101,7 @@ export const useAppStore = create<AppState>()(
         activeBookId: state.activeBookId,
         currency: state.currency,
         activeMonth: state.activeMonth,
+        monthStartDay: state.monthStartDay,
         dashboardSectionOrder: state.dashboardSectionOrder,
       }),
     }

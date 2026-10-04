@@ -55,11 +55,31 @@ export function parseMonthKey(key: string): Date {
   return new Date(year, month - 1, 1);
 }
 
-export function getMonthRange(monthKey: string): { start: Date; end: Date } {
+export const MAX_MONTH_START_DAY = 28;
+
+export function normalizeMonthStartDay(day: unknown): number {
+  const n = Math.floor(Number(day));
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.min(n, MAX_MONTH_START_DAY);
+}
+
+/**
+ * Date range for `monthKey`. With `startDay` > 1 the month runs from that day
+ * to the day before it in the next month (e.g. 10 → Oct 10 – Nov 9 for "2026-10").
+ */
+export function getMonthRange(monthKey: string, startDay = 1): { start: Date; end: Date } {
   const [year, month] = monthKey.split("-").map(Number);
-  const start = new Date(year, month - 1, 1);
-  const end = new Date(year, month, 0, 23, 59, 59, 999);
+  const day = normalizeMonthStartDay(startDay);
+  const start = new Date(year, month - 1, day);
+  const end = new Date(year, month, day - 1, 23, 59, 59, 999);
   return { start, end };
+}
+
+/** Month key of the period containing `date` when months start on `startDay`. */
+export function getPeriodKey(date: Date, startDay = 1): string {
+  const day = normalizeMonthStartDay(startDay);
+  if (date.getDate() >= day) return getMonthKey(date);
+  return getMonthKey(new Date(date.getFullYear(), date.getMonth() - 1, 1));
 }
 
 export function getPrevMonthKey(monthKey: string): string {

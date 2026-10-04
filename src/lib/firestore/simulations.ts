@@ -36,6 +36,7 @@ export async function getSimulation(
     amounts: (data.amounts as Record<string, number>) ?? {},
     whatIfCategories: (data.whatIfCategories as SimulationWhatIfCategory[]) ?? [],
     whatIfAmounts: (data.whatIfAmounts as Record<string, number>) ?? {},
+    debtAmounts: data.debtAmounts as Record<string, number> | undefined,
     updatedAt: data.updatedAt,
   };
 }
@@ -51,6 +52,7 @@ export async function saveSimulation(
       amounts: data.amounts,
       whatIfCategories: data.whatIfCategories,
       whatIfAmounts: data.whatIfAmounts,
+      debtAmounts: data.debtAmounts,
       updatedAt: serverTimestamp(),
     })
   );

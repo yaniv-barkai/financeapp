@@ -29,7 +29,7 @@ import { getLimitsForMonth } from "@/lib/firestore/budgets";
 import { updateCategoryOrders } from "@/lib/firestore/categories";
 import { skipRecurringPeriod } from "@/lib/firestore/recurring";
 import { Transaction } from "@/lib/types";
-import { formatCurrency, formatDate, getMonthRange, getPrevMonthKey, getMonthKey } from "@/lib/utils";
+import { formatCurrency, formatDate, getMonthRange, getPrevMonthKey, getNextMonthKey, getPeriodKey } from "@/lib/utils";
 import { MonthSwitcher } from "@/components/dashboard/MonthSwitcher";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -79,7 +79,7 @@ function SortableCategoryRow({ id, isReordering, children }: SortableCategoryRow
 
 export default function DashboardPage() {
   const { user, loading } = useRequireAuth();
-  const { activeBookId, categories, setCategories, tags, currency, activeMonth, txVersion, bumpTxVersion } = useAppStore();
+  const { activeBookId, categories, setCategories, tags, currency, activeMonth, monthStartDay, txVersion, bumpTxVersion } = useAppStore();
   const { t, locale } = useLocale();
   const isRtl = locale === "he";
   const confirm = useConfirm();
@@ -93,10 +93,12 @@ export default function DashboardPage() {
   const [isReordering, setIsReordering] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
-  const { start, end } = getMonthRange(activeMonth);
-  const { end: prevEnd } = getMonthRange(getPrevMonthKey(activeMonth));
+  const { start, end } = getMonthRange(activeMonth, monthStartDay);
+  const prevMonthKey = getPrevMonthKey(activeMonth);
+  const { end: prevEnd } = getMonthRange(prevMonthKey, monthStartDay);
   // Cumulative rollover starts from Feb 2026
-  const rolloverOrigin = new Date(2026, 1, 1); // Feb 1 2026
+  const rolloverOriginKey = "2026-02";
+  const { start: rolloverOrigin } = getMonthRange(rolloverOriginKey, monthStartDay);
 
   const loadData = async () => {
     if (!user || !activeBookId) return;
@@ -124,7 +126,7 @@ export default function DashboardPage() {
       // Bucket history transactions by month key
       const byMonth: Record<string, Record<string, number>> = {};
       historyTxs.forEach((tx) => {
-        const mk = getMonthKey(tx.date.toDate());
+        const mk = getPeriodKey(tx.date.toDate(), monthStartDay);
         if (!byMonth[mk]) byMonth[mk] = {};
         const delta = tx.type === "expense" ? tx.amount : -tx.amount;
         byMonth[mk][tx.categoryId] = (byMonth[mk][tx.categoryId] ?? 0) + delta;
@@ -132,12 +134,8 @@ export default function DashboardPage() {
 
       // Load per-month budgets for rollover history (fall back to current limits)
       const monthKeys: string[] = [];
-      {
-        const cursor = new Date(rolloverOrigin);
-        while (cursor <= prevEnd) {
-          monthKeys.push(getMonthKey(cursor));
-          cursor.setMonth(cursor.getMonth() + 1);
-        }
+      for (let mk = rolloverOriginKey; mk <= prevMonthKey; mk = getNextMonthKey(mk)) {
+        monthKeys.push(mk);
       }
       const limitsByMonth: Record<string, Record<string, number>> = {};
       await Promise.all(
@@ -154,17 +152,11 @@ export default function DashboardPage() {
         .filter((c) => c.type === "expense")
         .forEach((cat) => {
           let debt = 0;
-          const cursor = new Date(rolloverOrigin);
-          while (cursor <= prevEnd) {
-            const mk = getMonthKey(cursor);
+          for (const mk of monthKeys) {
             const lim = limitsByMonth[mk]?.[cat.id] ?? lims[cat.id];
-            if (!lim || lim <= 0) {
-              cursor.setMonth(cursor.getMonth() + 1);
-              continue;
-            }
+            if (!lim || lim <= 0) continue;
             const spent = Math.max(0, byMonth[mk]?.[cat.id] ?? 0);
             debt += spent - lim;
-            cursor.setMonth(cursor.getMonth() + 1);
           }
           if (debt > 0) overspend[cat.id] = debt;
         });
@@ -176,7 +168,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadData();
-  }, [user, activeBookId, activeMonth, categories.length, txVersion]);
+  }, [user, activeBookId, activeMonth, monthStartDay, categories.length, txVersion]);
 
   const totalIncome = useMemo(
     () => transactions.filter((tx) => tx.type === "income").reduce((s, tx) => s + tx.amount, 0),

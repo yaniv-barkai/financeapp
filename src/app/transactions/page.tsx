@@ -50,7 +50,7 @@ import { useConfirm } from "@/components/providers/ConfirmProvider";
 
 export default function TransactionsPage() {
   const { user, loading } = useRequireAuth();
-  const { activeBookId, categories, tags, currency, activeMonth, books, txVersion, bumpTxVersion, setMerchants } = useAppStore();
+  const { activeBookId, categories, tags, currency, activeMonth, monthStartDay, books, txVersion, bumpTxVersion, setMerchants } = useAppStore();
   const { t, locale } = useLocale();
 
   const confirm = useConfirm();
@@ -68,7 +68,7 @@ export default function TransactionsPage() {
   const [converting, setConverting] = useState(false);
   const [maxSync, setMaxSync] = useState<MaxSyncSettings | null>(null);
 
-  const { start, end } = getMonthRange(activeMonth);
+  const { start, end } = getMonthRange(activeMonth, monthStartDay);
 
   const loadData = async () => {
     if (!user || !activeBookId) return;
@@ -78,7 +78,7 @@ export default function TransactionsPage() {
 
   useEffect(() => {
     loadData();
-  }, [user, activeBookId, activeMonth, txVersion]);
+  }, [user, activeBookId, activeMonth, monthStartDay, txVersion]);
 
   useEffect(() => {
     if (!user) return;

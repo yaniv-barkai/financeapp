@@ -2,6 +2,17 @@
 
 Newest first. Format: `vMAJOR.MINOR` (two-digit minor). See `.cursor/rules/versioning.mdc`.
 
+## v1.09 — 2026-10-02
+
+- New setting: Settings → Preferences → "Month starts on". Pick any day from the 1st to the 28th, for example your credit card billing day (the 10th). The Dashboard and Transactions then show each month from that day to the day before it in the next month (e.g. Oct 10 – Nov 9) instead of the calendar month. The month picker shows the exact dates under the month name.
+- A month is named after the month it starts in, and uses that month's budget. For example, with the 10th, "October" runs Oct 10 – Nov 9. Budget overspend carried over from earlier months is counted the same way.
+- The default is still the 1st, so nothing changes unless you pick another day.
+- Simulation → Budget now fills in your debts automatically. Under Expenses there's a new "Debt payments" list with one row per open debt (in pay-off order), pre-filled with its monthly payment and showing its balance. You can change any row to try a different payment, and "Fill from debts" puts the real monthly payments back. Your changes are saved with the simulation.
+- A new card under the monthly picture shows whether you can make your debt payments: the monthly debt payments needed, what's left for debts (income minus all other expenses), and either "with X to spare" in green or "X a month short" in red. It also warns you if the debt payments you typed add up to less than what your debts need.
+- Debt payments are no longer counted twice. Their automatic recurring payments used to be included in the "Debts" category as well; now they only appear in their own rows. Simulations you saved before have that amount taken out of the category once, the first time you open them.
+- In "Pay off debts", the Budget tab button now uses what's left for debts (income minus non-debt expenses) instead of the net after debts. The plan pays the monthly payments out of that amount, so before this the payments were counted twice.
+- Fixed: the Recurring page looked cramped on phones. Each item's buttons (add to transactions, on/off, edit, delete) now sit on their own line under the item, so the name, amount and details have room. Suggestions get the same layout, and the monthly summary amounts no longer overflow on small screens.
+
 ## v1.08 — 2026-09-29
 
 - You can now connect AI assistants (Claude Desktop, Cursor, LM Studio and other MCP apps) to your finances. In Settings → "AI assistants (MCP)", create a personal access token and paste the ready-made config snippet into your assistant.

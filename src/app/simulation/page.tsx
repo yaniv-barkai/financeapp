@@ -1,7 +1,16 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Eraser, Plus, Save, Trash2 } from "lucide-react";
+import Link from "next/link";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Eraser,
+  Plus,
+  RefreshCw,
+  Save,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -14,6 +23,9 @@ import {
 } from "@/lib/firestore/simulations";
 import { getRecurring, toMonthlyRecurringAmount } from "@/lib/firestore/recurring";
 import { getTransactionsByMonth } from "@/lib/firestore/transactions";
+import { getDebts } from "@/lib/firestore/debts";
+import { isAutoDebtRecurring } from "@/lib/debt-recurring";
+import { sortDebtsByPayoffOrder } from "@/lib/snowball";
 import {
   averageExpenseByCategory,
   averageIncomeByCategory,
@@ -21,7 +33,7 @@ import {
   computeIncomeByCategory,
   lookbackMonthKeys,
 } from "@/lib/budget";
-import { SimulationWhatIfCategory, TransactionType } from "@/lib/types";
+import { Debt, SimulationWhatIfCategory, TransactionType } from "@/lib/types";
 import {
   cn,
   formatCurrency,
@@ -75,6 +87,24 @@ function sumRecord(
   return total;
 }
 
+/** What a debt needs this month: its fixed payment, capped at what's left to pay. */
+function debtRequiredPayment(debt: Debt): number {
+  return Math.min(debt.balance, Math.max(0, debt.monthlyPayment));
+}
+
+/** Debt row inputs: saved simulation value when present, else the debt's monthly payment. */
+function debtAmountInputs(
+  debts: Debt[],
+  saved?: Record<string, number>
+): Record<string, string> {
+  const next: Record<string, string> = {};
+  for (const debt of debts) {
+    const value = saved?.[debt.id];
+    next[debt.id] = amountToInput(value !== undefined ? value : debtRequiredPayment(debt));
+  }
+  return next;
+}
+
 export default function SimulationPage() {
   const { loading: authLoading } = useRequireAuth();
   const { user } = useAuth();
@@ -92,6 +122,9 @@ export default function SimulationPage() {
   const [recurringByCat, setRecurringByCat] = useState<Record<string, number>>({});
   const [prevByCat, setPrevByCat] = useState<Record<string, number>>({});
   const [avg3ByCat, setAvg3ByCat] = useState<Record<string, number>>({});
+  const [debts, setDebts] = useState<Debt[]>([]);
+  const [debtAmounts, setDebtAmounts] = useState<Record<string, string>>({});
+  const [debtCategoryIds, setDebtCategoryIds] = useState<string[]>([]);
   const [addOpen, setAddOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<TransactionType>("expense");
@@ -110,12 +143,14 @@ export default function SimulationPage() {
     (
       cats: { id: string }[],
       recurring: Record<string, number>,
-      prev: Record<string, number>
+      prev: Record<string, number>,
+      recurringOnlyIds: string[]
     ): Record<string, string> => {
       const next: Record<string, string> = {};
       for (const cat of cats) {
         const fromRec = recurring[cat.id] ?? 0;
-        const fromPrev = prev[cat.id] ?? 0;
+        // Last month in these categories includes debt payments, which have their own rows.
+        const fromPrev = recurringOnlyIds.includes(cat.id) ? 0 : (prev[cat.id] ?? 0);
         const seed = fromRec > 0 ? fromRec : fromPrev;
         if (seed > 0) next[cat.id] = String(Math.round(seed));
       }
@@ -135,17 +170,32 @@ export default function SimulationPage() {
       const { start: historyStart } = getMonthRange(historyStartKey);
       const { end: prevEnd } = getMonthRange(prevKey);
 
-      const [sim, recurrings, historyTxs] = await Promise.all([
+      const [sim, recurrings, historyTxs, allDebts] = await Promise.all([
         getSimulation(user.uid, activeBookId),
         getRecurring(user.uid, activeBookId),
         getTransactionsByMonth(user.uid, activeBookId, historyStart, prevEnd),
+        getDebts(user.uid, activeBookId),
       ]);
 
+      const openDebts = sortDebtsByPayoffOrder(
+        allDebts.filter((d) => d.status === "open" && d.balance > 0)
+      );
+      const debtRecurringIds = new Set(
+        allDebts.map((d) => d.recurringId).filter((id): id is string => !!id)
+      );
+
+      // Debt payments get their own rows, so their auto recurrings stay out of the category totals.
       const recMap: Record<string, number> = {};
+      const debtRecByCat: Record<string, number> = {};
       for (const r of recurrings.filter((x) => x.active)) {
         const monthly = toMonthlyRecurringAmount(r.amount, r.cadence);
-        recMap[r.categoryId] = (recMap[r.categoryId] ?? 0) + monthly;
+        if (debtRecurringIds.has(r.id) || isAutoDebtRecurring(r)) {
+          debtRecByCat[r.categoryId] = (debtRecByCat[r.categoryId] ?? 0) + monthly;
+        } else {
+          recMap[r.categoryId] = (recMap[r.categoryId] ?? 0) + monthly;
+        }
       }
+      const debtCats = Object.keys(debtRecByCat);
 
       const prevTxs = historyTxs.filter(
         (tx) => getMonthKey(tx.date.toDate()) === prevKey
@@ -161,11 +211,22 @@ export default function SimulationPage() {
       setRecurringByCat(recMap);
       setPrevByCat(prevMap);
       setAvg3ByCat(avgMap);
+      setDebts(openDebts);
+      setDebtCategoryIds(debtCats);
+      setDebtAmounts(debtAmountInputs(openDebts, sim?.debtAmounts));
 
       if (sim) {
         const amountInputs: Record<string, string> = {};
         for (const [id, value] of Object.entries(sim.amounts)) {
           amountInputs[id] = amountToInput(value);
+        }
+        if (!sim.debtAmounts) {
+          // Sheets saved before debt rows had the debt recurrings seeded into their category.
+          for (const [catId, debtMonthly] of Object.entries(debtRecByCat)) {
+            const saved = sim.amounts[catId];
+            if (saved === undefined) continue;
+            amountInputs[catId] = amountToInput(Math.max(0, Math.round(saved - debtMonthly)));
+          }
         }
         const whatIfInputs: Record<string, string> = {};
         for (const [id, value] of Object.entries(sim.whatIfAmounts)) {
@@ -178,7 +239,7 @@ export default function SimulationPage() {
         const allCats = [
           ...categories.filter((c) => c.type === "income" || c.type === "expense"),
         ];
-        setAmounts(seedAmounts(allCats, recMap, prevMap));
+        setAmounts(seedAmounts(allCats, recMap, prevMap, debtCats));
         setWhatIfCategories([]);
         setWhatIfAmounts({});
       }
@@ -217,11 +278,24 @@ export default function SimulationPage() {
   const whatIfIncomeIds = whatIfCategories.filter((c) => c.type === "income").map((c) => c.id);
   const whatIfExpenseIds = whatIfCategories.filter((c) => c.type === "expense").map((c) => c.id);
 
+  const parsedDebtAmounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const debt of debts) map[debt.id] = parseAmount(debtAmounts[debt.id] ?? "");
+    return map;
+  }, [debts, debtAmounts]);
+
   const simIncome =
     sumRecord(incomeIds, parsedAmounts) + sumRecord(whatIfIncomeIds, parsedWhatIfAmounts);
-  const simExpense =
+  const simOtherExpense =
     sumRecord(expenseIds, parsedAmounts) + sumRecord(whatIfExpenseIds, parsedWhatIfAmounts);
+  const simDebt = Object.values(parsedDebtAmounts).reduce((s, v) => s + v, 0);
+  const simExpense = simOtherExpense + simDebt;
   const simNet = simIncome - simExpense;
+
+  const debtRequired = debts.reduce((s, d) => s + debtRequiredPayment(d), 0);
+  const leftForDebts = simIncome - simOtherExpense;
+  const debtCoverage = leftForDebts - debtRequired;
+  const debtShortfallInSim = debtRequired - simDebt;
 
   const baselineIncome = (map: Record<string, number>) => sumRecord(incomeIds, map);
   const baselineExpense = (map: Record<string, number>) => sumRecord(expenseIds, map);
@@ -234,6 +308,15 @@ export default function SimulationPage() {
     setWhatIfAmounts((prev) => ({ ...prev, [id]: value }));
   };
 
+  const setDebtAmount = (id: string, value: string) => {
+    setDebtAmounts((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleFillDebts = () => {
+    setDebtAmounts(debtAmountInputs(debts));
+    toast.success(t.simulation_debts_filled);
+  };
+
   const handleSave = async () => {
     if (!user || !activeBookId) return;
     setSaving(true);
@@ -242,6 +325,7 @@ export default function SimulationPage() {
         amounts: parsedAmounts,
         whatIfCategories,
         whatIfAmounts: parsedWhatIfAmounts,
+        debtAmounts: parsedDebtAmounts,
       });
       toast.success(t.simulation_saved);
     } catch (err) {
@@ -261,7 +345,8 @@ export default function SimulationPage() {
     });
     if (!ok) return;
     const allCats = [...incomeCategories, ...expenseCategories];
-    setAmounts(seedAmounts(allCats, recurringByCat, prevByCat));
+    setAmounts(seedAmounts(allCats, recurringByCat, prevByCat, debtCategoryIds));
+    setDebtAmounts(debtAmountInputs(debts));
     setWhatIfCategories([]);
     setWhatIfAmounts({});
   };
@@ -341,6 +426,119 @@ export default function SimulationPage() {
     </div>
   );
 
+  const renderColumnHeader = (firstCol: string) => (
+    <div className="hidden sm:flex items-center gap-2 px-2 text-[11px] text-muted-foreground">
+      <span className={cn("min-w-0 flex-1", align)}>{firstCol}</span>
+      <span className="w-[90px] shrink-0 text-center">{t.simulation_col_recurring}</span>
+      <span className="w-[90px] shrink-0 text-center">{t.simulation_col_prev}</span>
+      <span className="w-[90px] shrink-0 text-center">{t.simulation_col_avg3}</span>
+      <span className="w-[110px] shrink-0 text-center">{t.simulation_col_sim}</span>
+    </div>
+  );
+
+  const renderDebtSection = () => (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+        <h2 className={cn("text-sm font-semibold text-muted-foreground", align)}>
+          {t.simulation_section_debts}
+        </h2>
+        <Button type="button" variant="outline" size="sm" onClick={handleFillDebts}>
+          <RefreshCw className="h-3.5 w-3.5 me-1" />
+          {t.simulation_debts_fill}
+        </Button>
+      </div>
+      <p className={cn("text-xs text-muted-foreground px-1", align)}>
+        {t.simulation_debts_hint}{" "}
+        <Link href="/debts" className="text-primary underline-offset-2 hover:underline">
+          {t.payoff_manage_debts}
+        </Link>
+      </p>
+      {renderColumnHeader(t.simulation_col_debt)}
+      {debts.map((debt) =>
+        renderRow({
+          key: debt.id,
+          label: (
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate">{debt.name}</span>
+              <span className="text-[11px] font-normal text-muted-foreground">
+                {t.simulation_debt_balance.replace(
+                  "{amount}",
+                  formatCurrency(debt.balance, currency)
+                )}
+              </span>
+            </span>
+          ),
+          recurring: debtRequiredPayment(debt),
+          prev: 0,
+          avg3: 0,
+          inputValue: debtAmounts[debt.id] ?? "",
+          onChange: (v) => setDebtAmount(debt.id, v),
+        })
+      )}
+    </div>
+  );
+
+  const debtCoverageCard = (
+    <Card
+      className={cn(
+        debtCoverage >= 0 ? "border-green-600/30" : "border-red-500/40"
+      )}
+    >
+      <CardContent className="space-y-3 p-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className={cn("space-y-0.5", align)}>
+            <div className="text-[11px] text-muted-foreground">{t.simulation_debts_required}</div>
+            <div className="text-lg font-semibold tabular-nums" dir="ltr">
+              {formatCurrency(debtRequired, currency)}
+            </div>
+          </div>
+          <div className={cn("space-y-0.5", align)} title={t.simulation_debts_available_hint}>
+            <div className="text-[11px] text-muted-foreground">{t.simulation_debts_available}</div>
+            <div
+              className={cn(
+                "text-lg font-semibold tabular-nums",
+                debtCoverage >= 0 ? "text-green-600" : "text-red-500"
+              )}
+              dir="ltr"
+            >
+              {formatCurrency(leftForDebts, currency)}
+            </div>
+            <div className="text-[11px] text-muted-foreground">
+              {t.simulation_debts_available_hint}
+            </div>
+          </div>
+          <div
+            className={cn(
+              "col-span-2 flex items-start gap-2 text-sm sm:col-span-1",
+              debtCoverage >= 0 ? "text-green-700" : "text-red-600"
+            )}
+          >
+            {debtCoverage >= 0 ? (
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+            ) : (
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            )}
+            <span className={align}>
+              {(debtCoverage >= 0
+                ? t.simulation_debts_covered
+                : t.simulation_debts_short
+              ).replace("{amount}", formatCurrency(Math.abs(debtCoverage), currency))}
+            </span>
+          </div>
+        </div>
+        {debtShortfallInSim > 0.5 && (
+          <p className={cn("flex items-start gap-2 text-xs text-amber-600", align)}>
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            {t.simulation_debts_below_required.replace(
+              "{amount}",
+              formatCurrency(debtShortfallInSim, currency)
+            )}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   const renderSection = (
     title: string,
     realCats: typeof incomeCategories,
@@ -348,13 +546,7 @@ export default function SimulationPage() {
   ) => (
     <div className="space-y-2">
       <h2 className={cn("text-sm font-semibold text-muted-foreground px-1", align)}>{title}</h2>
-      <div className="hidden sm:flex items-center gap-2 px-2 text-[11px] text-muted-foreground">
-        <span className={cn("min-w-0 flex-1", align)}>{t.simulation_col_category}</span>
-        <span className="w-[90px] shrink-0 text-center">{t.simulation_col_recurring}</span>
-        <span className="w-[90px] shrink-0 text-center">{t.simulation_col_prev}</span>
-        <span className="w-[90px] shrink-0 text-center">{t.simulation_col_avg3}</span>
-        <span className="w-[110px] shrink-0 text-center">{t.simulation_col_sim}</span>
-      </div>
+      {renderColumnHeader(t.simulation_col_category)}
       {realCats.map((cat) =>
         renderRow({
           key: cat.id,
@@ -451,7 +643,7 @@ export default function SimulationPage() {
         </TabsList>
 
         <TabsContent value="payoff" forceMount className="mt-4 data-[state=inactive]:hidden">
-          <DebtPayoffPanel budgetSimNet={simNet} />
+          <DebtPayoffPanel budgetForDebts={leftForDebts} />
         </TabsContent>
 
         <TabsContent value="budget" className="mt-4 space-y-4">
@@ -490,7 +682,9 @@ export default function SimulationPage() {
                     {t.simulation_col_recurring}:{" "}
                     <span dir="ltr" className="tabular-nums">
                       {formatCurrency(
-                        baselineIncome(recurringByCat) - baselineExpense(recurringByCat),
+                        baselineIncome(recurringByCat) -
+                          baselineExpense(recurringByCat) -
+                          debtRequired,
                         currency
                       )}
                     </span>
@@ -512,6 +706,8 @@ export default function SimulationPage() {
             </CardContent>
           </Card>
 
+          {!loading && debts.length > 0 && debtCoverageCard}
+
           {loading ? (
             <p className={cn("text-sm text-muted-foreground py-8", align)}>{t.simulation_loading}</p>
           ) : (
@@ -526,6 +722,7 @@ export default function SimulationPage() {
                 expenseCategories,
                 whatIfCategories.filter((c) => c.type === "expense")
               )}
+              {debts.length > 0 && renderDebtSection()}
             </div>
           )}
         </TabsContent>

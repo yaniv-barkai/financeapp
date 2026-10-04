@@ -124,6 +124,8 @@ export interface Simulation {
   amounts: Record<string, number>;
   whatIfCategories: SimulationWhatIfCategory[];
   whatIfAmounts: Record<string, number>;
+  /** debtId → simulated monthly payment (0 kept so a cleared row stays cleared); missing on sheets saved before debt rows */
+  debtAmounts?: Record<string, number>;
   updatedAt?: Timestamp;
 }
 
@@ -211,6 +213,8 @@ export interface UserSettings {
   alertSettings?: AlertSettings;
   /** Preferred UI/email locale; falls back to client localStorage when unset. */
   locale?: "en" | "he";
+  /** Day of the month (1–28) the dashboard month starts on, e.g. the credit card billing day. Default 1. */
+  monthStartDay?: number;
 }
 
 /** Persisted guide preferences that cannot be derived from finance data. */

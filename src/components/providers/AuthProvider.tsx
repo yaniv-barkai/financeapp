@@ -13,6 +13,7 @@ import { getBooks, seedDefaultBook } from "@/lib/firestore/books";
 import { getCategories } from "@/lib/firestore/categories";
 import { getMerchants } from "@/lib/firestore/merchants";
 import { useAppStore, setStoreUserId, clearUserSession } from "@/lib/store";
+import { normalizeMonthStartDay } from "@/lib/utils";
 
 interface AuthContextValue {
   user: User | null;
@@ -39,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [accountBlocked, setAccountBlocked] = useState(false);
-  const { setBooks, setCategories, setMerchants, setActiveBookId, setCurrency, activeBookId } =
+  const { setBooks, setCategories, setMerchants, setActiveBookId, setCurrency, setMonthStartDay, activeBookId } =
     useAppStore();
 
   const refreshClaims = async () => {
@@ -72,6 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const validBook = books.find((b) => b.id === preferredBookId) ?? books[0];
           setActiveBookId(validBook.id);
           if (settings?.currency) setCurrency(settings.currency);
+          setMonthStartDay(normalizeMonthStartDay(settings?.monthStartDay));
 
           const cats = await getCategories(u.uid, validBook.id);
           setCategories(cats);

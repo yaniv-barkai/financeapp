@@ -351,11 +351,16 @@ export default function RecurringPage() {
               const cat = categories.find((c) => c.id === s.categoryId);
               const monthsLabel = s.monthsMatched.join(", ");
               return (
-                <div key={s.fingerprint} className="flex items-center gap-3 px-4 py-3">
-                  <span className="text-xl w-8 text-center flex-shrink-0">{cat?.icon ?? "💡"}</span>
+                <div
+                  key={s.fingerprint}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:flex-nowrap"
+                >
+                  <span className="text-xl w-8 text-center flex-shrink-0 self-start sm:self-center">
+                    {cat?.icon ?? "💡"}
+                  </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{s.merchantDisplay}</p>
-                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <div className="flex items-center gap-x-2 gap-y-1 mt-1 flex-wrap">
                       <Badge variant="outline" className="text-xs py-0">
                         {t.recurring_suggestions_day.replace("{day}", String(s.dayOfMonth))}
                       </Badge>
@@ -364,27 +369,32 @@ export default function RecurringPage() {
                       </span>
                     </div>
                   </div>
-                  <span className="font-semibold text-sm flex-shrink-0 text-red-500 tabular-nums" dir="ltr">
+                  <span
+                    className="font-semibold text-sm flex-shrink-0 text-red-500 tabular-nums self-start sm:self-center"
+                    dir="ltr"
+                  >
                     {formatCurrency(s.amount, currency)}
                   </span>
-                  <Button
-                    size="sm"
-                    className="h-8 gap-1.5 flex-shrink-0"
-                    disabled={acceptingFp === s.fingerprint}
-                    onClick={() => handleAcceptSuggestion(s)}
-                  >
-                    <Check className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">{t.recurring_suggestions_accept}</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 gap-1.5 flex-shrink-0 text-muted-foreground"
-                    onClick={() => handleDismissSuggestion(s)}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">{t.recurring_suggestions_dismiss}</span>
-                  </Button>
+                  <div className="flex w-full items-center justify-end gap-1 sm:w-auto">
+                    <Button
+                      size="sm"
+                      className="h-8 gap-1.5 flex-shrink-0"
+                      disabled={acceptingFp === s.fingerprint}
+                      onClick={() => handleAcceptSuggestion(s)}
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      <span>{t.recurring_suggestions_accept}</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 gap-1.5 flex-shrink-0 text-muted-foreground"
+                      onClick={() => handleDismissSuggestion(s)}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      <span>{t.recurring_suggestions_dismiss}</span>
+                    </Button>
+                  </div>
                 </div>
               );
             })}
@@ -405,32 +415,35 @@ export default function RecurringPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="flex flex-col gap-1 items-start">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="flex flex-col gap-1 items-start min-w-0">
                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <TrendingUp className="h-3.5 w-3.5 text-green-500" />
                   {t.budget_summary_income}
                 </span>
-                <span className="text-lg font-bold text-green-600 tabular-nums" dir="ltr">
+                <span className="text-sm sm:text-lg font-bold text-green-600 tabular-nums break-all" dir="ltr">
                   {formatCurrency(monthlyIncome, currency)}
                 </span>
               </div>
-              <div className="flex flex-col gap-1 items-start">
+              <div className="flex flex-col gap-1 items-start min-w-0">
                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <TrendingDown className="h-3.5 w-3.5 text-red-500" />
                   {t.budget_summary_expenses}
                 </span>
-                <span className="text-lg font-bold text-red-500 tabular-nums" dir="ltr">
+                <span className="text-sm sm:text-lg font-bold text-red-500 tabular-nums break-all" dir="ltr">
                   {formatCurrency(monthlyExpenses, currency)}
                 </span>
               </div>
-              <div className="flex flex-col gap-1 items-start">
+              <div className="flex flex-col gap-1 items-start min-w-0">
                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Wallet className="h-3.5 w-3.5" />
                   {t.budget_summary_net}
                 </span>
                 <span
-                  className={`text-lg font-bold tabular-nums ${monthlyNet >= 0 ? "text-green-600" : "text-red-500"}`}
+                  className={cn(
+                    "text-sm sm:text-lg font-bold tabular-nums break-all",
+                    monthlyNet >= 0 ? "text-green-600" : "text-red-500"
+                  )}
                   dir="ltr"
                 >
                   {formatCurrency(monthlyNet, currency)}
@@ -451,8 +464,16 @@ export default function RecurringPage() {
           {recurrings.map((r) => {
             const cat = categories.find((c) => c.id === r.categoryId);
             return (
-              <div key={r.id} className={`flex items-center gap-3 px-4 py-3 ${!r.active ? "opacity-50" : ""}`}>
-                <span className="text-xl w-8 text-center flex-shrink-0">{cat?.icon ?? "🔄"}</span>
+              <div
+                key={r.id}
+                className={cn(
+                  "flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:flex-nowrap",
+                  !r.active && "opacity-50"
+                )}
+              >
+                <span className="text-xl w-8 text-center flex-shrink-0 self-start sm:self-center">
+                  {cat?.icon ?? "🔄"}
+                </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">
                     {r.merchantDisplay || cat?.name}
@@ -462,46 +483,54 @@ export default function RecurringPage() {
                       {r.note.trim()}
                     </p>
                   )}
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <div className="flex items-center gap-x-2 gap-y-1 mt-1 flex-wrap">
                     <Badge variant="outline" className="text-xs py-0">{cadenceLabel(r.cadence)}</Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {t.recurring_next} {formatDate(r.nextRunDate.toDate())}
-                    </span>
                     <Badge variant={r.type === "income" ? "default" : "secondary"} className="text-xs py-0">
                       {typeLabel(r.type)}
                     </Badge>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {t.recurring_next} {formatDate(r.nextRunDate.toDate())}
+                    </span>
                   </div>
                 </div>
-                <span className={`font-semibold text-sm flex-shrink-0 ${r.type === "income" ? "text-green-600" : "text-red-500"}`}>
+                <span
+                  className={cn(
+                    "font-semibold text-sm flex-shrink-0 tabular-nums self-start sm:self-center",
+                    r.type === "income" ? "text-green-600" : "text-red-500"
+                  )}
+                  dir="ltr"
+                >
                   {formatCurrency(r.amount, currency)}
                 </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 flex-shrink-0"
-                  disabled={!r.active || bookingId === r.id}
-                  onClick={() => handleAddToTransaction(r)}
-                  title={t.recurring_add_to_transaction}
-                >
-                  <ArrowRightLeft className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">{t.recurring_add_to_transaction}</span>
-                </Button>
-                <Switch
-                  checked={r.active}
-                  onCheckedChange={() => handleToggleActive(r)}
-                  className="flex-shrink-0"
-                />
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(r)}>
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  onClick={() => handleDelete(r)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex w-full items-center justify-end gap-1 border-t pt-2 sm:w-auto sm:border-t-0 sm:pt-0 sm:gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 flex-shrink-0 me-auto sm:me-0"
+                    disabled={!r.active || bookingId === r.id}
+                    onClick={() => handleAddToTransaction(r)}
+                    title={t.recurring_add_to_transaction}
+                  >
+                    <ArrowRightLeft className="h-3.5 w-3.5" />
+                    <span>{t.recurring_add_to_transaction}</span>
+                  </Button>
+                  <Switch
+                    checked={r.active}
+                    onCheckedChange={() => handleToggleActive(r)}
+                    className="flex-shrink-0 mx-1"
+                  />
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(r)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => handleDelete(r)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             );
           })}

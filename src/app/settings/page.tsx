@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Pencil, Trash2, LogOut, BookOpen, Globe, BrainCircuit, CreditCard, Bell, ExternalLink } from "lucide-react";
+import { Pencil, Trash2, LogOut, BookOpen, Globe, BrainCircuit, CreditCard, Bell, ExternalLink, CalendarDays } from "lucide-react";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useAppStore } from "@/lib/store";
@@ -10,6 +10,7 @@ import { updateBook, deleteBook, getBooks } from "@/lib/firestore/books";
 import { getAllTransactions } from "@/lib/firestore/transactions";
 import { rebuildMerchantMemory, getMerchants } from "@/lib/firestore/merchants";
 import { setUserSettings, getUserSettings } from "@/lib/firestore/settings";
+import { MAX_MONTH_START_DAY, getPeriodKey, normalizeMonthStartDay } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,7 +46,10 @@ const BOOK_COLORS = [
 export default function SettingsPage() {
   const { loading } = useRequireAuth();
   const { user, signOutUser, isAdmin } = useAuth();
-  const { books, setBooks, activeBookId, setActiveBookId, currency, setCurrency, setMerchants } = useAppStore();
+  const {
+    books, setBooks, activeBookId, setActiveBookId, currency, setCurrency, setMerchants,
+    monthStartDay, setMonthStartDay, setActiveMonth,
+  } = useAppStore();
   const { t, locale, setLocale } = useLocale();
 
   const confirm = useConfirm();
@@ -139,6 +143,13 @@ export default function SettingsPage() {
     if (user) await setUserSettings(user.uid, { currency: val });
   };
 
+  const handleMonthStartDayChange = async (val: string) => {
+    const day = normalizeMonthStartDay(val);
+    setMonthStartDay(day);
+    setActiveMonth(getPeriodKey(new Date(), day));
+    if (user) await setUserSettings(user.uid, { monthStartDay: day });
+  };
+
   const handleEditBook = async () => {
     if (!user || !editBook) return;
     setSaving(true);
@@ -195,6 +206,26 @@ export default function SettingsPage() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4" />
+              {t.settings_month_start}
+            </Label>
+            <Select value={String(monthStartDay)} onValueChange={handleMonthStartDayChange}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: MAX_MONTH_START_DAY }, (_, i) => i + 1).map((d) => (
+                  <SelectItem key={d} value={String(d)}>
+                    {t.settings_month_start_option.replace("{n}", String(d))}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">{t.settings_month_start_desc}</p>
           </div>
 
           <div className="space-y-1.5">
