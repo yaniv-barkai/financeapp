@@ -2,6 +2,11 @@
 
 Newest first. Format: `vMAJOR.MINOR` (two-digit minor). See `.cursor/rules/versioning.mdc`.
 
+## v1.11 — 2026-10-11
+
+- AI assistants with a Read + Write token can now fix a category: rename it, change its English name, emoji or color. Renaming to a name that another category of the same type already has is blocked.
+- An assistant can also switch a category between income and expense, but only while no transactions or recurring items use it (for example, right after creating it with the wrong type). Otherwise it's told to create a new category instead, so your existing data stays consistent.
+
 ## v1.10 — 2026-10-11
 
 - AI assistants connected with a Read + Write token can now create new income or expense categories (name, optional English name, emoji and color). The new category goes to the end of its list, just like one you add on the Categories page. To avoid duplicates, the assistant can't create a category with the same name as an existing one of the same type.

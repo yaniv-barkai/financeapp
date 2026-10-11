@@ -152,6 +152,33 @@ export async function addCategoryAdmin(
   return ref.id;
 }
 
+export async function updateCategoryAdmin(
+  uid: string,
+  bookId: string,
+  catId: string,
+  data: Partial<Pick<Category, "name" | "nameEn" | "type" | "icon" | "color">>
+): Promise<void> {
+  await getAdminFirestore()
+    .doc(`${bookPath(uid, bookId)}/categories/${catId}`)
+    .update(
+      withoutUndefined({
+        ...data,
+        nameEn: data.nameEn === "" ? FieldValue.delete() : data.nameEn,
+      })
+    );
+}
+
+/** True when any transaction or recurring item points at the category. */
+export async function isCategoryInUse(uid: string, bookId: string, catId: string): Promise<boolean> {
+  const db = getAdminFirestore();
+  const [tx, rec] = await Promise.all(
+    ["transactions", "recurring"].map((name) =>
+      db.collection(`${bookPath(uid, bookId)}/${name}`).where("categoryId", "==", catId).limit(1).get()
+    )
+  );
+  return !tx.empty || !rec.empty;
+}
+
 export async function loadMonthTransactions(
   uid: string,
   bookId: string,

@@ -4,12 +4,14 @@ import {
   addCategoryAdmin,
   addTaskAdmin,
   addTransactionAdmin,
+  isCategoryInUse,
   loadCategories,
   loadMerchant,
   loadTags,
   loadTask,
   loadTransaction,
   resolveBookId,
+  updateCategoryAdmin,
   updateTaskAdmin,
   updateTransactionAdmin,
   upsertMerchantAdmin,
@@ -41,6 +43,24 @@ function requireCategory(categories: Category[], categoryId: string, type?: Tran
     throw new ToolError(`Category "${cat.name}" is an ${cat.type} category, not ${type}.`);
   }
   return cat;
+}
+
+function assertNoDuplicateCategory(
+  categories: Category[],
+  type: TransactionType,
+  names: (string | undefined)[],
+  exceptId?: string
+): void {
+  const wanted = names.filter((n): n is string => !!n).map((n) => n.toLowerCase());
+  const duplicate = categories.find(
+    (c) =>
+      c.type === type &&
+      c.id !== exceptId &&
+      [c.name, c.nameEn].some((n) => n && wanted.includes(n.trim().toLowerCase()))
+  );
+  if (duplicate) {
+    throw new ToolError(`An ${type} category named "${duplicate.name}" already exists (id ${duplicate.id}).`);
+  }
 }
 
 function resolveTagIds(tags: Tag[], requested: string[]): string[] {
@@ -186,17 +206,12 @@ export function registerWriteTools(server: McpServer): void {
       runTool(async () => {
         const { uid } = getCaller(ctx, "write");
         const book = await resolveBookId(uid, args.bookId);
-        const sameType = (await loadCategories(uid, book)).filter((c) => c.type === args.type);
+        const categories = await loadCategories(uid, book);
+        const sameType = categories.filter((c) => c.type === args.type);
 
         const name = args.name.trim();
         const nameEn = args.nameEn?.trim() || undefined;
-        const wanted = [name, nameEn].filter(Boolean).map((n) => n!.toLowerCase());
-        const duplicate = sameType.find((c) =>
-          [c.name, c.nameEn].some((n) => n && wanted.includes(n.trim().toLowerCase()))
-        );
-        if (duplicate) {
-          throw new ToolError(`An ${args.type} category named "${duplicate.name}" already exists (id ${duplicate.id}).`);
-        }
+        assertNoDuplicateCategory(categories, args.type, [name, nameEn]);
 
         const category = {
           name,
@@ -212,6 +227,62 @@ export function registerWriteTools(server: McpServer): void {
           ok: true,
           bookId: book,
           category: { id, name, nameEn: nameEn ?? null, type: args.type, icon: category.icon, color: category.color },
+        };
+      })
+  );
+
+  server.registerTool(
+    "update_category",
+    {
+      title: "Update category",
+      description:
+        "Fix an existing category: rename it, change its English name, emoji or color. Changing type (income/expense) is only allowed while no transactions or recurring items use the category. Requires a Read + Write token.",
+      inputSchema: z.object({
+        bookId: bookIdField,
+        categoryId: idField,
+        name: z.string().trim().min(1).max(60).optional(),
+        nameEn: z.string().trim().max(60).optional().describe("New English name; empty string clears it."),
+        type: z.enum(["income", "expense"]).optional(),
+        icon: z.string().trim().min(1).max(16).optional().describe("A single emoji."),
+        color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().describe("Hex color like #22c55e."),
+      }),
+      annotations: { ...WRITE, idempotentHint: true },
+    },
+    async (args, ctx) =>
+      runTool(async () => {
+        const { uid } = getCaller(ctx, "write");
+        const book = await resolveBookId(uid, args.bookId);
+        const { name, nameEn, type, icon, color } = args;
+        if ([name, nameEn, type, icon, color].every((v) => v === undefined)) {
+          throw new ToolError("Nothing to update: pass name, nameEn, type, icon or color.");
+        }
+
+        const categories = await loadCategories(uid, book);
+        const cat = requireCategory(categories, args.categoryId);
+        const nextType = type ?? cat.type;
+        const nextName = name ?? cat.name;
+        const nextNameEn = nameEn === undefined ? cat.nameEn : nameEn || undefined;
+        assertNoDuplicateCategory(categories, nextType, [nextName, nextNameEn], cat.id);
+
+        if (nextType !== cat.type && (await isCategoryInUse(uid, book, cat.id))) {
+          throw new ToolError(
+            `Can't change "${cat.name}" to ${nextType}: it is used by transactions or recurring items. Create a new ${nextType} category instead.`
+          );
+        }
+
+        await updateCategoryAdmin(uid, book, cat.id, { name, nameEn, type, icon, color });
+        return {
+          ok: true,
+          bookId: book,
+          category: {
+            id: cat.id,
+            name: nextName,
+            nameEn: nextNameEn ?? null,
+            type: nextType,
+            icon: icon ?? cat.icon,
+            color: color ?? cat.color,
+          },
+          previous: { name: cat.name, nameEn: cat.nameEn ?? null, type: cat.type, icon: cat.icon, color: cat.color },
         };
       })
   );
