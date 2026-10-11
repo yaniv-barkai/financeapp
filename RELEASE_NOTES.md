@@ -2,6 +2,10 @@
 
 Newest first. Format: `vMAJOR.MINOR` (two-digit minor). See `.cursor/rules/versioning.mdc`.
 
+## v1.10 — 2026-10-11
+
+- AI assistants connected with a Read + Write token can now create new income or expense categories (name, optional English name, emoji and color). The new category goes to the end of its list, just like one you add on the Categories page. To avoid duplicates, the assistant can't create a category with the same name as an existing one of the same type.
+
 ## v1.09 — 2026-10-02
 
 - New setting: Settings → Preferences → "Month starts on". Pick any day from the 1st to the 28th, for example your credit card billing day (the 10th). The Dashboard and Transactions then show each month from that day to the day before it in the next month (e.g. Oct 10 – Nov 9) instead of the calendar month. The month picker shows the exact dates under the month name.

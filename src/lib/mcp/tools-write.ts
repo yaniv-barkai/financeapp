@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import {
+  addCategoryAdmin,
   addTaskAdmin,
   addTransactionAdmin,
   loadCategories,
@@ -21,6 +22,8 @@ import { bookIdField, idField } from "./tools-read";
 const dayField = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 const WRITE = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;
+
+const CATEGORY_COLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#f97316", "#6b7280"];
 
 function todayInIsrael(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(new Date());
@@ -156,6 +159,60 @@ export function registerWriteTools(server: McpServer): void {
         }
 
         return { ok: true, bookId: book, transactionId: tx.id, updated: Object.keys(args).filter((k) => k !== "bookId" && k !== "transactionId") };
+      })
+  );
+
+  server.registerTool(
+    "create_category",
+    {
+      title: "Create category",
+      description:
+        "Create a new income or expense category in a book. Fails if a category of the same type already has this name; call list_categories first to reuse existing ones. Requires a Read + Write token.",
+      inputSchema: z.object({
+        bookId: bookIdField,
+        type: z.enum(["income", "expense"]),
+        name: z.string().trim().min(1).max(60).describe("Display name, in the user's language."),
+        nameEn: z.string().trim().max(60).optional().describe("English name, if name is in another language."),
+        icon: z.string().trim().min(1).max(16).optional().describe("A single emoji. Defaults to 📦."),
+        color: z
+          .string()
+          .regex(/^#[0-9a-fA-F]{6}$/)
+          .optional()
+          .describe("Hex color like #22c55e. Defaults to the next color in the app palette."),
+      }),
+      annotations: { ...WRITE, idempotentHint: false },
+    },
+    async (args, ctx) =>
+      runTool(async () => {
+        const { uid } = getCaller(ctx, "write");
+        const book = await resolveBookId(uid, args.bookId);
+        const sameType = (await loadCategories(uid, book)).filter((c) => c.type === args.type);
+
+        const name = args.name.trim();
+        const nameEn = args.nameEn?.trim() || undefined;
+        const wanted = [name, nameEn].filter(Boolean).map((n) => n!.toLowerCase());
+        const duplicate = sameType.find((c) =>
+          [c.name, c.nameEn].some((n) => n && wanted.includes(n.trim().toLowerCase()))
+        );
+        if (duplicate) {
+          throw new ToolError(`An ${args.type} category named "${duplicate.name}" already exists (id ${duplicate.id}).`);
+        }
+
+        const category = {
+          name,
+          nameEn,
+          type: args.type,
+          icon: args.icon?.trim() || "📦",
+          color: args.color ?? CATEGORY_COLORS[sameType.length % CATEGORY_COLORS.length],
+          pinned: false,
+          order: Math.max(0, ...sameType.map((c) => c.order)) + 1,
+        };
+        const id = await addCategoryAdmin(uid, book, category);
+        return {
+          ok: true,
+          bookId: book,
+          category: { id, name, nameEn: nameEn ?? null, type: args.type, icon: category.icon, color: category.color },
+        };
       })
   );
 

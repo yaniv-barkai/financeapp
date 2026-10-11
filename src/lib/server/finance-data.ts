@@ -141,6 +141,17 @@ export async function loadLimits(
   return loadLegacyLimits(uid, bookId, categories);
 }
 
+export async function addCategoryAdmin(
+  uid: string,
+  bookId: string,
+  data: Omit<Category, "id">
+): Promise<string> {
+  const ref = await getAdminFirestore()
+    .collection(`${bookPath(uid, bookId)}/categories`)
+    .add(withoutUndefined({ ...data }));
+  return ref.id;
+}
+
 export async function loadMonthTransactions(
   uid: string,
   bookId: string,
