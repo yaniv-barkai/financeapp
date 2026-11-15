@@ -141,7 +141,10 @@ export interface Translations {
   monthly_budget_income: string;
   monthly_budget_income_total_hint: string;
   monthly_budget_section_income: string;
+  monthly_budget_section_debts: string;
   monthly_budget_section_expenses: string;
+  monthly_budget_debts_hint: string;
+  monthly_budget_col_debt: string;
   monthly_budget_received: string;
   monthly_budget_copy_sim: string;
   monthly_budget_copy_sim_done: string;
@@ -913,7 +916,11 @@ const en: Translations = {
   monthly_budget_income: "Income",
   monthly_budget_income_total_hint: "Sum of income categories",
   monthly_budget_section_income: "Income",
+  monthly_budget_section_debts: "Debt payments",
   monthly_budget_section_expenses: "Expenses",
+  monthly_budget_debts_hint:
+    "Filled from each open debt's monthly payment on the Debts page. Edit payments there.",
+  monthly_budget_col_debt: "Debt",
   monthly_budget_received: "Received",
   monthly_budget_copy_sim: "Copy from simulation",
   monthly_budget_copy_sim_done: "Copied from your saved simulation — review and save",
@@ -1697,7 +1704,11 @@ const he: Translations = {
   monthly_budget_income: "הכנסה",
   monthly_budget_income_total_hint: "סכום קטגוריות ההכנסה",
   monthly_budget_section_income: "הכנסות",
+  monthly_budget_section_debts: "תשלומי חובות",
   monthly_budget_section_expenses: "הוצאות",
+  monthly_budget_debts_hint:
+    "מולא לפי התשלום החודשי של כל חוב פתוח בעמוד החובות. ערכו תשלומים שם.",
+  monthly_budget_col_debt: "חוב",
   monthly_budget_received: "התקבל",
   monthly_budget_copy_sim: "העתק מהסימולציה",
   monthly_budget_copy_sim_done: "הועתק מהסימולציה השמורה — בדקו ושמרו",

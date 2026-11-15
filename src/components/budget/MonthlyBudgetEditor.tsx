@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   ChevronLeft,
   ChevronRight,
   Copy,
+  CreditCard,
   Eraser,
   Sparkles,
   Save,
@@ -22,6 +24,7 @@ import {
   getBudgetEditorSeed,
   saveMonthlyBudget,
 } from "@/lib/firestore/budgets";
+import { getDebts } from "@/lib/firestore/debts";
 import { getRecurring, toMonthlyRecurringAmount } from "@/lib/firestore/recurring";
 import { getSimulation } from "@/lib/firestore/simulations";
 import {
@@ -29,6 +32,7 @@ import {
   updateTransaction,
 } from "@/lib/firestore/transactions";
 import { upsertMerchant } from "@/lib/firestore/merchants";
+import { isAutoDebtRecurring } from "@/lib/debt-recurring";
 import {
   averageExpenseByCategory,
   averageIncomeByCategory,
@@ -37,8 +41,9 @@ import {
   computeIncomeByCategory,
   lookbackMonthKeys,
 } from "@/lib/budget";
+import { sortDebtsByPayoffOrder } from "@/lib/snowball";
 import { getIdToken } from "@/lib/auth-token";
-import { Category, Transaction } from "@/lib/types";
+import { Category, Debt, Transaction } from "@/lib/types";
 import {
   cn,
   formatCurrency,
@@ -60,6 +65,29 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { TransactionCategoryControls } from "@/components/transactions/TransactionCategoryControls";
+
+/** What a debt needs this month: its fixed payment, capped at what's left to pay. */
+function debtRequiredPayment(debt: Debt): number {
+  return Math.min(debt.balance, Math.max(0, debt.monthlyPayment));
+}
+
+/** Strip debt auto-recurrings that used to sit inside category budgets (now shown as debt rows). */
+function stripDebtFromCategoryAmounts(
+  amounts: Record<string, number>,
+  debtRecByCat: Record<string, number>
+): Record<string, number> {
+  const next = { ...amounts };
+  for (const [catId, debtMonthly] of Object.entries(debtRecByCat)) {
+    const saved = next[catId];
+    if (saved === undefined || debtMonthly <= 0) continue;
+    if (saved >= debtMonthly) {
+      const stripped = Math.round(saved - debtMonthly);
+      if (stripped > 0) next[catId] = stripped;
+      else delete next[catId];
+    }
+  }
+  return next;
+}
 
 interface SuggestItem {
   catId: string;
@@ -126,6 +154,7 @@ export function MonthlyBudgetEditor() {
   const [suggesting, setSuggesting] = useState(false);
   const [suggestions, setSuggestions] = useState<SuggestItem[] | null>(null);
   const [suggestSummary, setSuggestSummary] = useState("");
+  const [debts, setDebts] = useState<Debt[]>([]);
 
   const expenseCategories = useMemo(
     () => categories.filter((c) => c.type === "expense").sort((a, b) => a.order - b.order),
@@ -158,25 +187,41 @@ export function MonthlyBudgetEditor() {
       const { end: prevEnd } = getMonthRange(prevKey);
       const { start, end } = getMonthRange(budgetMonth);
 
-      const [seed, recurrings, historyTxs, monthTransactions] = await Promise.all([
-        getBudgetEditorSeed(user.uid, activeBookId, budgetMonth, categories),
-        getRecurring(user.uid, activeBookId),
-        getTransactionsByMonth(user.uid, activeBookId, historyStart, prevEnd),
-        getTransactionsByMonth(user.uid, activeBookId, start, end),
-      ]);
+      const [seed, recurrings, historyTxs, monthTransactions, allDebts] =
+        await Promise.all([
+          getBudgetEditorSeed(user.uid, activeBookId, budgetMonth, categories),
+          getRecurring(user.uid, activeBookId),
+          getTransactionsByMonth(user.uid, activeBookId, historyStart, prevEnd),
+          getTransactionsByMonth(user.uid, activeBookId, start, end),
+          getDebts(user.uid, activeBookId),
+        ]);
 
+      const openDebts = sortDebtsByPayoffOrder(
+        allDebts.filter((d) => d.status === "open" && d.balance > 0)
+      );
+      const debtRecurringIds = new Set(
+        allDebts.map((d) => d.recurringId).filter((id): id is string => !!id)
+      );
+
+      // Debt payments get their own rows, so their auto recurrings stay out of category totals.
       const recMap: Record<string, number> = {};
       const recIncomeMap: Record<string, number> = {};
+      const debtRecByCat: Record<string, number> = {};
       for (const r of recurrings.filter((x) => x.active)) {
         const monthly = toMonthlyRecurringAmount(r.amount, r.cadence);
         if (r.type === "expense") {
-          recMap[r.categoryId] = (recMap[r.categoryId] ?? 0) + monthly;
+          if (debtRecurringIds.has(r.id) || isAutoDebtRecurring(r)) {
+            debtRecByCat[r.categoryId] = (debtRecByCat[r.categoryId] ?? 0) + monthly;
+          } else {
+            recMap[r.categoryId] = (recMap[r.categoryId] ?? 0) + monthly;
+          }
         } else if (r.type === "income") {
           recIncomeMap[r.categoryId] = (recIncomeMap[r.categoryId] ?? 0) + monthly;
         }
       }
       setRecurringByCat(recMap);
       setRecurringIncomeByCat(recIncomeMap);
+      setDebts(openDebts);
 
       const prevTxs = historyTxs.filter(
         (tx) => getMonthKey(tx.date.toDate()) === prevKey
@@ -191,7 +236,14 @@ export function MonthlyBudgetEditor() {
       setIsSet(seed.isSet);
       setSeededFrom(seed.seededFrom);
 
-      setAmounts(toInputs(expenseCategories, seed.amounts));
+      // Older seeds (previous / legacy) often baked debt recurrings into the Debts
+      // category; strip those once so debt rows aren't double-counted. Saved month
+      // budgets are left as-is so intentional Debts-category amounts stay put.
+      const expenseSeed =
+        seed.seededFrom === "month"
+          ? seed.amounts
+          : stripDebtFromCategoryAmounts(seed.amounts, debtRecByCat);
+      setAmounts(toInputs(expenseCategories, expenseSeed));
       // Budgets saved before per-category income start from recurring income.
       setIncomeAmounts(
         toInputs(
@@ -218,10 +270,17 @@ export function MonthlyBudgetEditor() {
     [parsedIncomeAmounts]
   );
 
-  const totalBudget = useMemo(
+  const debtRequired = useMemo(
+    () => debts.reduce((s, d) => s + debtRequiredPayment(d), 0),
+    [debts]
+  );
+
+  const categoryBudget = useMemo(
     () => Object.values(parsedAmounts).reduce((s, v) => s + v, 0),
     [parsedAmounts]
   );
+
+  const totalBudget = categoryBudget + debtRequired;
 
   const totalSpent = useMemo(
     () => Object.values(currentSpent).reduce((s, v) => s + v, 0),
@@ -318,7 +377,19 @@ export function MonthlyBudgetEditor() {
         toast.info(t.monthly_budget_copy_sim_empty);
         return;
       }
-      setAmounts(toInputs(expenseCategories, sim.amounts));
+      // Debt payments stay on their own rows (from Debts); only copy category amounts.
+      let expenseAmounts = { ...sim.amounts };
+      if (!sim.debtAmounts && debts.length > 0) {
+        const debtRecByCat: Record<string, number> = {};
+        for (const debt of debts) {
+          const catId = debt.categoryId;
+          if (!catId) continue;
+          const pay = debtRequiredPayment(debt);
+          if (pay > 0) debtRecByCat[catId] = (debtRecByCat[catId] ?? 0) + pay;
+        }
+        expenseAmounts = stripDebtFromCategoryAmounts(expenseAmounts, debtRecByCat);
+      }
+      setAmounts(toInputs(expenseCategories, expenseAmounts));
       setIncomeAmounts(toInputs(incomeCategories, sim.amounts));
       toast.success(t.monthly_budget_copy_sim_done);
       const skippedWhatIfs = sim.whatIfCategories.filter(
@@ -472,11 +543,11 @@ export function MonthlyBudgetEditor() {
 
   const align = isRtl ? "text-right" : "text-left";
 
-  const renderSectionHeader = (title: string) => (
+  const renderSectionHeader = (title: string, firstCol = t.monthly_budget_col_category) => (
     <>
       <h3 className={cn("text-sm font-semibold text-muted-foreground px-1", align)}>{title}</h3>
       <div className="hidden sm:flex items-center gap-2 px-2 text-[11px] text-muted-foreground">
-        <span className={cn("min-w-0 flex-1", align)}>{t.monthly_budget_col_category}</span>
+        <span className={cn("min-w-0 flex-1", align)}>{firstCol}</span>
         <span className="w-[90px] shrink-0 text-center">{t.monthly_budget_col_recurring}</span>
         <span className="w-[90px] shrink-0 text-center">{t.monthly_budget_col_prev}</span>
         <span className="w-[90px] shrink-0 text-center">{t.monthly_budget_col_avg3}</span>
@@ -484,6 +555,68 @@ export function MonthlyBudgetEditor() {
       </div>
     </>
   );
+
+  const renderDebtRow = (debt: Debt) => {
+    const payment = debtRequiredPayment(debt);
+    return (
+      <div
+        key={debt.id}
+        className="flex flex-col gap-2 rounded-lg border px-3 py-2.5 sm:flex-row sm:items-center"
+      >
+        <div className={cn("flex min-w-0 flex-1 items-center gap-2", align)}>
+          <span className="w-8 h-8 flex items-center justify-center rounded-md flex-shrink-0 bg-muted text-muted-foreground">
+            <CreditCard className="h-4 w-4" />
+          </span>
+          <div className={cn("min-w-0", align)}>
+            <div className="font-medium text-sm truncate">{debt.name}</div>
+            <div className="text-[11px] text-muted-foreground">
+              {t.simulation_debt_balance.replace(
+                "{amount}",
+                formatCurrency(debt.balance, currency)
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="w-full text-start text-xs tabular-nums text-muted-foreground sm:w-[90px] sm:shrink-0 sm:text-center">
+          <span className={cn("sm:hidden text-muted-foreground me-1", align)}>
+            {t.monthly_budget_col_recurring}:
+          </span>
+          <span dir="ltr" className="inline-block">
+            {payment > 0 ? formatCurrency(payment, currency) : "—"}
+          </span>
+        </div>
+        <div className="w-full text-start text-xs tabular-nums text-muted-foreground sm:w-[90px] sm:shrink-0 sm:text-center">
+          <span className={cn("sm:hidden text-muted-foreground me-1", align)}>
+            {t.monthly_budget_col_prev}:
+          </span>
+          <span dir="ltr" className="inline-block">
+            —
+          </span>
+        </div>
+        <div className="w-full text-start text-xs tabular-nums text-muted-foreground sm:w-[90px] sm:shrink-0 sm:text-center">
+          <span className={cn("sm:hidden text-muted-foreground me-1", align)}>
+            {t.monthly_budget_col_avg3}:
+          </span>
+          <span dir="ltr" className="inline-block">
+            —
+          </span>
+        </div>
+        <Input
+          type="number"
+          readOnly
+          tabIndex={-1}
+          className={cn(
+            "h-8 w-full text-sm tabular-nums sm:w-[110px] sm:shrink-0 bg-muted/40 cursor-default",
+            isRtl && "text-right"
+          )}
+          value={payment > 0 ? String(Math.round(payment)) : ""}
+          placeholder="0"
+          aria-label={debt.name}
+          dir="ltr"
+        />
+      </div>
+    );
+  };
 
   const renderCategoryRow = (cat: Category, isIncome: boolean) => {
     const rec = (isIncome ? recurringIncomeByCat : recurringByCat)[cat.id] ?? 0;
@@ -738,7 +871,9 @@ export function MonthlyBudgetEditor() {
       <CardContent className="pt-4">
         {loading ? (
           <p className={cn("text-sm text-muted-foreground py-6", align)}>{t.monthly_budget_loading}</p>
-        ) : expenseCategories.length === 0 && incomeCategories.length === 0 ? (
+        ) : expenseCategories.length === 0 &&
+          incomeCategories.length === 0 &&
+          debts.length === 0 ? (
           <p className={cn("text-sm text-muted-foreground py-6", align)}>{t.categories_no_categories}</p>
         ) : (
           <div className="space-y-6">
@@ -746,6 +881,24 @@ export function MonthlyBudgetEditor() {
               <div className="space-y-2">
                 {renderSectionHeader(t.monthly_budget_section_income)}
                 {incomeCategories.map((cat) => renderCategoryRow(cat, true))}
+              </div>
+            )}
+            {debts.length > 0 && (
+              <div className="space-y-2">
+                {renderSectionHeader(
+                  t.monthly_budget_section_debts,
+                  t.monthly_budget_col_debt
+                )}
+                <p className={cn("text-xs text-muted-foreground px-1", align)}>
+                  {t.monthly_budget_debts_hint}{" "}
+                  <Link
+                    href="/debts"
+                    className="text-primary underline-offset-2 hover:underline"
+                  >
+                    {t.payoff_manage_debts}
+                  </Link>
+                </p>
+                {debts.map((debt) => renderDebtRow(debt))}
               </div>
             )}
             {expenseCategories.length > 0 && (

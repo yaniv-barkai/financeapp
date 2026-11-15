@@ -2,6 +2,10 @@
 
 Newest first. Format: `vMAJOR.MINOR` (two-digit minor). See `.cursor/rules/versioning.mdc`.
 
+## v1.12 — 2026-11-15
+
+- The monthly budget (Categories) now loads open debts from the Debts page and lists their monthly payments right under Income. Those payments count toward Budgeted / Left, and the automatic debt recurrings are no longer double-counted inside expense categories.
+
 ## v1.11 — 2026-10-11
 
 - AI assistants with a Read + Write token can now fix a category: rename it, change its English name, emoji or color. Renaming to a name that another category of the same type already has is blocked.
